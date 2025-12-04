@@ -5,16 +5,20 @@ import SideBar from "../components/common/SideBar";
 const DashboardLayout = ({ children }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
   return (
     <div className="h-screen flex bg-backgroundLight">
       {/* Sidebar */}
       <SideBar
         isCollapsed={isSidebarCollapsed}
-        onToggle={setIsSidebarCollapsed}
+        onToggle={toggleSidebar}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300">
         {/* Header */}
         <Header />
 

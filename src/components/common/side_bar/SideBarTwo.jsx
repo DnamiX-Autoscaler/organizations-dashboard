@@ -1,14 +1,16 @@
 import React from "react";
 
-const SideBarTwo = ({ subMenuItems, activeSubItem, onSubChange }) => {
+const SideBarTwo = ({ title, subMenuItems, activeSubItem, onSubChange }) => {
   return (
     <div className="flex flex-col w-64 border-r border-gray-200 bg-backgroundLight">
+
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-800">Metrics</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Monitor your system performance
-        </p>
+        <h2 className="font-medium text-gray-800 text-md">{title}</h2>
+        {/* Optionally, you can customize the subtitle based on title if needed */}
+        {/* <p className="mt-1 text-sm text-gray-500">
+          {title === "Metrics" ? "Monitor your system performance" : ""}
+        </p> */}
       </div>
 
       {/* Search */}
@@ -45,8 +47,8 @@ const SideBarTwo = ({ subMenuItems, activeSubItem, onSubChange }) => {
               key={item.id}
               onClick={() => onSubChange(item.id)}
               className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors ${activeSubItem === item.id
-                  ? "bg-primary text-white"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                ? "bg-primary text-white"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
             >
               <span>{item.label}</span>
