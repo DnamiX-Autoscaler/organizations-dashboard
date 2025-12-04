@@ -1,8 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 
-const SideBarOne = ({ isCollapsed, onToggle }) => {
-  const [activeItem, setActiveItem] = useState("metrics");
-
+const SideBarOne = ({ isCollapsed, onToggle, activeItem, onActiveChange }) => {
   const menuItems = [
     {
       id: "metrics",
@@ -278,12 +276,11 @@ const SideBarOne = ({ isCollapsed, onToggle }) => {
         {menuItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => setActiveItem(item.id)}
-            className={`p-3 rounded-lg transition-colors group relative ${
-              activeItem === item.id
+            onClick={() => onActiveChange(item.id)}
+            className={`p-3 rounded-lg transition-colors group relative ${activeItem === item.id
                 ? "bg-primary text-white"
                 : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-            }`}
+              }`}
             title={item.label}
           >
             {item.icon}
