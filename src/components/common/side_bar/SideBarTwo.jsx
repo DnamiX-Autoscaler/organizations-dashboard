@@ -2,7 +2,7 @@ import React from "react";
 
 const SideBarTwo = ({ title, subMenuItems, activeSubItem, onSubChange }) => {
   return (
-    <div className="flex flex-col w-64 border-r border-gray-200 bg-backgroundLight">
+    <div className="flex flex-col w-64 border-r border-gray-200 bg-backgroundLight relative z-[50]">
 
       {/* Header */}
       <div className="p-4 border-b border-gray-200">

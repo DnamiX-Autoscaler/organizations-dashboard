@@ -52,7 +52,7 @@ const SUB_MENUS = {
     { id: "overview", label: "Overview", hasNotification: false },
     { id: "details", label: "Details", hasNotification: false },
   ],
-  "dnami-ai": [
+  "dnamix-ai": [
     { id: "insights", label: "Insights", hasNotification: false },
     { id: "assist", label: "Assist", hasNotification: false },
   ],
@@ -72,7 +72,7 @@ const MAIN_MENU_LABELS = {
   "api-checker": "API Checker",
   terminal: "Terminal",
   "cost-analyzer": "Cost Analyzer",
-  "dnami-ai": "Dnami AI",
+  "dnamix-ai": "DnamiX AI",
 };
 
 const SideBar = ({ isCollapsed, onToggle }) => {
@@ -90,16 +90,19 @@ const SideBar = ({ isCollapsed, onToggle }) => {
   };
 
   return (
-    <div className="flex">
-      <SideBarOne
-        isCollapsed={isCollapsed}
-        onToggle={onToggle}
-        activeItem={activeMain}
-        onActiveChange={handleMainChange}
-      />
+    <div className="relative flex">
+      {/* Primary Sidebar - Higher z-index to ensure tooltips show above secondary sidebar */}
+      <div className="relative z-[100]">
+        <SideBarOne
+          isCollapsed={isCollapsed}
+          onToggle={onToggle}
+          activeItem={activeMain}
+          onActiveChange={handleMainChange}
+        />
+      </div>
 
-      {/* Secondary Sidebar with smooth transition */}
-      <div className={`transition-all duration-300 overflow-hidden ${isCollapsed ? 'w-0' : 'w-64'
+      {/* Secondary Sidebar with smooth transition - Lower z-index */}
+      <div className={`transition-all duration-300 overflow-hidden relative z-[50] ${isCollapsed ? "w-0" : "w-64"
         }`}>
         {!isCollapsed && (
           <SideBarTwo

@@ -3,8 +3,157 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 /* Apply Open Sans font globally */
 body {
 	font-family: 'Open Sans', sans-serif;
 }
 
+/* Hide scrollbar utility class */
+@layer utilities {
+  .scrollbar-hide {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+  
+  /* Smooth scroll behavior */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+  }
+
+  /* Enhanced tooltip animations */
+  .tooltip-enter {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-8px) scale(0.95);
+  }
+  
+  .tooltip-enter-active {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+    transition: all 0.2s ease-out;
+  }
+  
+  .tooltip-exit {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+  
+  .tooltip-exit-active {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-8px) scale(0.95);
+    transition: all 0.15s ease-in;
+  }
+}
+
+/* Enhanced hover states and animations */
+@layer base {
+  /* Smooth hover transitions for sidebar buttons */
+  .sidebar-button {
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .sidebar-button:hover {
+    transform: translateX(1px);
+  }
+  
+  .sidebar-button.active {
+    transform: translateX(2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Tooltip improvements */
+  .tooltip-container {
+    position: fixed;
+    z-index: 10000;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+  }
+  
+  .tooltip-content {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(75, 85, 99, 0.3);
+  }
+  
+  /* Enhanced arrow styling */
+  .tooltip-arrow {
+    filter: drop-shadow(-1px 0px 1px rgba(0, 0, 0, 0.1));
+  }
+  
+  /* Prevent any interference with tooltip display */
+  .sidebar-primary {
+    position: relative;
+    z-index: 100;
+  }
+  
+  .sidebar-secondary {
+    position: relative;
+    z-index: 50;
+  }
+}
+
+/* Additional hover effects */
+@layer components {
+  .icon-hover {
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .icon-hover:hover {
+    transform: scale(1.1);
+  }
+  
+  /* Smooth color transitions */
+  .color-transition {
+    transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+  }
+  
+  /* Enhanced focus states for accessibility */
+  .sidebar-button:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+  
+  /* Custom scrollbar for better UX */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.5);
+    border-radius: 2px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(156, 163, 175, 0.8);
+  }
+}
+
+/* Performance optimizations */
+@layer base {
+  /* Enable hardware acceleration for smoother animations */
+  .sidebar-button,
+  .tooltip-container {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+  }
+  
+  /* Optimize repaint for tooltips */
+  .tooltip-content {
+    contain: layout style paint;
+  }
+}
