@@ -10,7 +10,7 @@ const DashboardLayout = ({ children }) => {
   };
 
   return (
-    <div className="h-screen flex bg-backgroundLight">
+    <div className="fixed inset-0 flex bg-backgroundLight">
       {/* Sidebar */}
       <SideBar
         isCollapsed={isSidebarCollapsed}
@@ -18,12 +18,14 @@ const DashboardLayout = ({ children }) => {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300">
+      <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300 h-screen">
         {/* Header */}
         <Header />
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-white p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-white p-6 h-0 min-h-0">
+          {children}
+        </main>
       </div>
     </div>
   );

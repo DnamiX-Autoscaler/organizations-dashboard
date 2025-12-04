@@ -202,11 +202,11 @@ const SideBarOne = ({ isCollapsed, onToggle, activeItem, onActiveChange }) => {
   return (
     <>
       <div
-        className={`flex flex-col justify-between bg-white border-r border-gray-200 transition-all duration-300 relative z-[100] ${isCollapsed ? "w-16" : "w-16"
-          }`}
+        className={`flex flex-col bg-white border-r border-gray-200 transition-all duration-300 relative z-[100] ${isCollapsed ? "w-16" : "w-16"
+          } h-screen`}
       >
         {/* Toggle Button */}
-        <div className="p-4">
+        <div className="flex-shrink-0 p-4">
           <button
             onClick={onToggle}
             className={`flex items-center justify-center w-8 h-8 text-gray-400 hover:text-gray-600 transition-transform duration-200 ${isCollapsed ? "rotate-0" : "rotate-180"
@@ -217,35 +217,37 @@ const SideBarOne = ({ isCollapsed, onToggle, activeItem, onActiveChange }) => {
         </div>
 
         {/* Main Menu Items with custom scrollbar */}
-        <div
-          ref={menuContainerRef}
-          className="flex flex-col flex-1 px-2 space-y-1 overflow-y-auto scrollbar-hide"
-          onWheel={handleWheel}
-          style={{
-            scrollbarWidth: "none", // Firefox
-            msOverflowStyle: "none", // IE and Edge
-          }}
-        >
-          {menuItems.map((item) => (
-            <div key={item.id}>
-              <button
-                data-menu-id={item.id}
-                onClick={() => onActiveChange(item.id)}
-                onMouseEnter={(e) => handleMouseEnter(item.id, e)}
-                onMouseLeave={handleMouseLeave}
-                className={`p-3 rounded-lg transition-colors w-full flex items-center justify-center ${activeItem === item.id
-                  ? "bg-primary text-white"
-                  : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                  }`}
-              >
-                {item.icon}
-              </button>
-            </div>
-          ))}
+        <div className="flex flex-col flex-1 min-h-0">
+          <div
+            ref={menuContainerRef}
+            className="flex flex-col flex-1 min-h-0 px-2 space-y-1 overflow-y-auto scrollbar-hide"
+            onWheel={handleWheel}
+            style={{
+              scrollbarWidth: "none", // Firefox
+              msOverflowStyle: "none", // IE and Edge
+            }}
+          >
+            {menuItems.map((item) => (
+              <div key={item.id}>
+                <button
+                  data-menu-id={item.id}
+                  onClick={() => onActiveChange(item.id)}
+                  onMouseEnter={(e) => handleMouseEnter(item.id, e)}
+                  onMouseLeave={handleMouseLeave}
+                  className={`p-3 rounded-lg transition-colors w-full flex items-center justify-center ${activeItem === item.id
+                    ? "bg-primary text-white"
+                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                    }`}
+                >
+                  {item.icon}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Bottom Menu Items */}
-        <div className="flex flex-col px-2 pb-4 space-y-1">
+        <div className="flex flex-col flex-shrink-0 px-2 pb-4 space-y-1">
           {bottomItems.map((item) => (
             <div key={item.id}>
               <button
