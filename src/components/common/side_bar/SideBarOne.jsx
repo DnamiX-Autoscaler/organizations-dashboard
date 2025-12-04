@@ -165,14 +165,14 @@ const SideBarOne = ({ isCollapsed, onToggle, activeItem, onActiveChange }) => {
   return (
     <>
       <div
-        className={`flex flex-col bg-white border-r border-gray-200 transition-all duration-300 relative z-[100] ${isCollapsed ? "w-16" : "w-16"
+        className={`flex flex-col bg-white dark:bg-darkBackground border-r border-gray-200 dark:border-darkBackgroundVery transition-all duration-300 relative z-[100] ${isCollapsed ? "w-16" : "w-16"
           } h-screen`}
       >
         {/* Toggle Button */}
         <div className="flex-shrink-0 p-4">
           <button
             onClick={onToggle}
-            className={`flex items-center justify-center w-8 h-8 text-gray-400 hover:text-gray-600 transition-transform duration-200 ${isCollapsed ? "rotate-0" : "rotate-180"
+            className={`flex items-center justify-center w-8 h-8 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-all duration-200 ${isCollapsed ? "rotate-0" : "rotate-180"
               }`}
           >
             <Icon icon="mdi:chevron-left" className="w-5 h-5" />
@@ -198,8 +198,8 @@ const SideBarOne = ({ isCollapsed, onToggle, activeItem, onActiveChange }) => {
                   onMouseEnter={(e) => handleMouseEnter(item.id, e)}
                   onMouseLeave={handleMouseLeave}
                   className={`p-3 rounded-lg transition-colors w-full flex items-center justify-center ${activeItem === item.id
-                    ? "bg-primary text-white"
-                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                    ? "text-primary dark:text-primary"
+                    : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-black"
                     }`}
                 >
                   {item.icon}
@@ -214,7 +214,7 @@ const SideBarOne = ({ isCollapsed, onToggle, activeItem, onActiveChange }) => {
           {bottomItems.map((item) => (
             <div key={item.id}>
               <button
-                className="flex items-center justify-center w-full p-3 text-gray-400 transition-colors rounded-lg hover:text-gray-600 hover:bg-gray-50"
+                className="flex items-center justify-center w-full p-3 text-gray-400 transition-colors rounded-lg dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-black"
                 onMouseEnter={(e) => handleMouseEnter(item.id, e)}
                 onMouseLeave={handleMouseLeave}
               >
@@ -236,16 +236,17 @@ const SideBarOne = ({ isCollapsed, onToggle, activeItem, onActiveChange }) => {
             opacity: hoveredItem ? 1 : 0,
           }}
         >
-          <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-2xl border border-gray-700 min-w-[200px] max-w-[250px]">
-            <div className="mb-1 text-sm font-semibold text-white">
+          <div className="px-4 py-3 rounded-lg shadow-2xl dark:border-gray-700 min-w-[200px] max-w-[250px] bg-white/70 dark:bg-darkBackgroundVery/70 backdrop-blur-md"
+          >
+            <div className="mb-1 text-sm font-semibold text-gray-900 dark:text-white">
               {hoveredItemData.label}
             </div>
-            <div className="text-xs leading-relaxed text-gray-300">
+            <div className="text-xs leading-relaxed text-gray-700 dark:text-gray-300">
               {hoveredItemData.description}
             </div>
             {/* Arrow pointing to the button */}
             <div className="absolute transform -translate-y-1/2 right-full top-1/2">
-              <div className="w-0 h-0 border-t-[8px] border-b-[8px] border-r-[8px] border-transparent border-r-gray-900"></div>
+              <div className="w-0 h-0 border-t-[8px] border-b-[8px] border-r-[8px] border-transparent border-r-white/70 dark:border-r-gray-900/70"></div>
             </div>
           </div>
         </div>

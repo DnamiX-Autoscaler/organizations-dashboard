@@ -10,7 +10,19 @@ export default {
         accent: "#000000",
         backgroundLight: "#FAFAFA",
         backgroundDark: "#F5F5F5",
+        darkBackground: "#1A1A1A",
+        darkBackgroundVery: "#0F0F0F",
         textLight: "#333333",
+        // Dark mode colors
+        dark: {
+          primary: "#84006A",
+          secondary: "#1F2937",
+          background: "#111827",
+          surface: "#1F2937",
+          text: "#F9FAFB",
+          darkBackground: "#1A1A1A",
+          darkBackgroundVery: "#0F0F0F",
+        }
       },
       fontFamily: {
         sans: ["Open Sans", "sans-serif"],

@@ -102,7 +102,7 @@ const SideBar = ({ isCollapsed, onToggle }) => {
       </div>
 
       {/* Secondary Sidebar with smooth transition - Lower z-index */}
-      <div className={`transition-all duration-300 overflow-hidden relative z-[50] ${isCollapsed ? "w-0" : "w-64"
+      <div className={`transition-all duration-300 overflow-hidden relative z-[50] bg-backgroundLight dark:bg-darkBackground border-r border-gray-200 dark:border-darkBackgroundVery ${isCollapsed ? "w-0" : "w-64"
         }`}>
         {!isCollapsed && (
           <SideBarTwo
