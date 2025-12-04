@@ -19,7 +19,7 @@ const SideBarTwo = ({ title, subMenuItems, activeSubItem, onSubChange }) => {
           <input
             type="text"
             placeholder="Search metrics..."
-            className="w-full px-3 py-2 text-sm text-gray-900 placeholder-gray-400 bg-white border border-gray-300 rounded-md dark:border-gray-700 pl-9 focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent dark:bg-darkBackground dark:text-gray-100 dark:placeholder-gray-500"
+            className="w-full px-3 py-2 text-sm text-gray-900 placeholder-gray-400 bg-white border border-gray-300 rounded-full dark:bg-darkBackgroundVery dark:border-darkBackground pl-9 focus:outline-none focus:ring-1 focus:ring-darkBackground focus:border-transparent dark:text-gray-100 dark:placeholder-gray-500"
           />
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
             <svg
@@ -46,8 +46,8 @@ const SideBarTwo = ({ title, subMenuItems, activeSubItem, onSubChange }) => {
             <button
               key={item.id}
               onClick={() => onSubChange(item.id)}
-              className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors ${activeSubItem === item.id
-                ? "bg-primary text-white"
+              className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-full transition-colors ${activeSubItem === item.id
+                ? "bg-white text-primary font-semibold dark:bg-darkBackgroundVery"
                 : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-black"
                 }`}
             >
@@ -61,7 +61,7 @@ const SideBarTwo = ({ title, subMenuItems, activeSubItem, onSubChange }) => {
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-200 dark:border-darkBackgroundVery">
+      {/* <div className="p-4 border-t border-gray-200 dark:border-darkBackgroundVery">
         <div className="text-xs text-gray-500 dark:text-gray-400">
           <div className="flex items-center justify-between mb-1">
             <span>Last updated:</span>
@@ -75,7 +75,7 @@ const SideBarTwo = ({ title, subMenuItems, activeSubItem, onSubChange }) => {
             </span>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };
