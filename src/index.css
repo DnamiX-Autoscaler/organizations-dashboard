@@ -3,8 +3,121 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 /* Apply Open Sans font globally */
 body {
 	font-family: 'Open Sans', sans-serif;
 }
 
+/* Hide scrollbar utility class */
+@layer utilities {
+  .scrollbar-hide {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+  
+  /* Smooth scroll behavior */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Enhanced tooltip and sidebar z-index management */
+@layer base {
+  /* Ensure tooltips are always on top */
+  .group:hover .group-hover\:opacity-100 {
+    z-index: 10000 !important;
+  }
+  
+  /* Fixed positioning for tooltips to prevent clipping */
+  .tooltip-fixed {
+    position: fixed !important;
+    z-index: 10000 !important;
+  }
+  
+  /* Sidebar z-index hierarchy */
+  .sidebar-primary {
+    z-index: 100;
+    position: relative;
+  }
+  
+  .sidebar-secondary {
+    z-index: 50;
+    position: relative;
+  }
+  
+  /* Ensure tooltips appear above everything including modals */
+  .tooltip-container {
+    position: relative;
+    z-index: 10000;
+  }
+  
+  /* Prevent tooltip clipping */
+  body {
+    overflow-x: visible;
+  }
+  
+  /* Enhanced tooltip styling */
+  .tooltip-enhanced {
+    position: fixed;
+    z-index: 10000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+    transform: translateY(-50%) translateX(0);
+  }
+  
+  .group:hover .tooltip-enhanced {
+    opacity: 1;
+    transform: translateY(-50%) translateX(4px);
+  }
+  
+  /* Ensure tooltips don't get cut off at screen edges */
+  .tooltip-content {
+    max-width: 220px;
+    min-width: 180px;
+    word-wrap: break-word;
+    white-space: normal;
+  }
+  
+  /* Arrow styling for tooltips */
+  .tooltip-arrow {
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border-style: solid;
+    border-width: 8px;
+    border-color: transparent;
+    border-right-color: #111827; /* gray-900 */
+  }
+}
+
+/* Additional utility classes */
+@layer components {
+  .sidebar-tooltip {
+    @apply fixed px-3 py-2 text-white transition-all duration-200 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl opacity-0 pointer-events-none;
+    z-index: 10000;
+  }
+  
+  .sidebar-tooltip.show {
+    @apply opacity-100;
+  }
+  
+  .sidebar-button {
+    @apply relative flex items-center justify-center w-full p-3 transition-colors rounded-lg;
+  }
+  
+  .sidebar-button.active {
+    @apply text-white bg-primary;
+  }
+  
+  .sidebar-button.inactive {
+    @apply text-gray-400 hover:text-gray-600 hover:bg-gray-50;
+  }
+}
