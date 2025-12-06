@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import SideBarOne from "./side_bar/SideBarOne";
 import SideBarTwo from "./side_bar/SideBarTwo";
+import { useRoute } from "../../utils/RouteContext";
 
 // Define sub-menu items for each main menu id
 const SUB_MENUS = {
@@ -76,8 +77,7 @@ const MAIN_MENU_LABELS = {
 };
 
 const SideBar = ({ isCollapsed, onToggle }) => {
-  const [activeMain, setActiveMain] = useState(MAIN_MENU_IDS[0]);
-  const [activeSub, setActiveSub] = useState(SUB_MENUS[activeMain][0]?.id);
+  const { activeMain, activeSub, setActiveMain, setActiveSub } = useRoute();
 
   const handleMainChange = (id) => {
     setActiveMain(id);
@@ -87,6 +87,10 @@ const SideBar = ({ isCollapsed, onToggle }) => {
     if (isCollapsed) {
       onToggle();
     }
+  };
+
+  const handleSubChange = (subId) => {
+    setActiveSub(subId);
   };
 
   return (
@@ -102,14 +106,17 @@ const SideBar = ({ isCollapsed, onToggle }) => {
       </div>
 
       {/* Secondary Sidebar with smooth transition - Lower z-index */}
-      <div className={`transition-all duration-300 overflow-hidden relative z-[50] bg-backgroundLight dark:bg-darkBackground border-r border-gray-200 dark:border-darkBackgroundVery ${isCollapsed ? "w-0" : "w-64"
-        }`}>
+      <div
+        className={`transition-all duration-300 overflow-hidden relative z-[50] bg-backgroundLight dark:bg-darkBackground border-r border-gray-200 dark:border-darkBackgroundVery ${
+          isCollapsed ? "w-0" : "w-64"
+        }`}
+      >
         {!isCollapsed && (
           <SideBarTwo
             title={MAIN_MENU_LABELS[activeMain]}
             subMenuItems={SUB_MENUS[activeMain]}
             activeSubItem={activeSub}
-            onSubChange={setActiveSub}
+            onSubChange={handleSubChange}
           />
         )}
       </div>
