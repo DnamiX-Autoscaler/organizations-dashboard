@@ -3,10 +3,11 @@ import React from "react";
 const SideBarTwo = ({ title, subMenuItems, activeSubItem, onSubChange }) => {
   return (
     <div className="flex flex-col w-64 border-r border-gray-200 bg-backgroundLight dark:bg-darkBackground dark:border-darkBackgroundVery relative z-[50]">
-
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-darkBackgroundVery">
-        <h2 className="font-medium text-gray-800 dark:text-gray-100 text-md">{title}</h2>
+        <h2 className="font-medium text-gray-800 dark:text-gray-100 text-md">
+          {title}
+        </h2>
         {/* Optionally, you can customize the subtitle based on title if needed */}
         {/* <p className="mt-1 text-sm text-gray-500">
           {title === "Metrics" ? "Monitor your system performance" : ""}
@@ -46,10 +47,11 @@ const SideBarTwo = ({ title, subMenuItems, activeSubItem, onSubChange }) => {
             <button
               key={item.id}
               onClick={() => onSubChange(item.id)}
-              className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-full transition-colors ${activeSubItem === item.id
-                ? "bg-white text-primary font-semibold dark:bg-darkBackgroundVery"
-                : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-black"
-                }`}
+              className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-full transition-colors ${
+                activeSubItem === item.id
+                  ? "bg-white text-primary font-semibold dark:bg-darkBackgroundVery"
+                  : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-black"
+              }`}
             >
               <span>{item.label}</span>
               {item.hasNotification && (
@@ -59,23 +61,6 @@ const SideBarTwo = ({ title, subMenuItems, activeSubItem, onSubChange }) => {
           ))}
         </nav>
       </div>
-
-      {/* Footer */}
-      {/* <div className="p-4 border-t border-gray-200 dark:border-darkBackgroundVery">
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          <div className="flex items-center justify-between mb-1">
-            <span>Last updated:</span>
-            <span>2 min ago</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Status:</span>
-            <span className="flex items-center">
-              <span className="w-2 h-2 mr-1 bg-green-500 rounded-full"></span>
-              Online
-            </span>
-          </div>
-        </div>
-      </div> */}
     </div>
   );
 };

@@ -1,10 +1,10 @@
 import DashboardLayout from "./layout/DashboardLayout";
-import Overview from "./dashboard/Overview";
+import ContentRenderer from "./dashboard/main_links/ContentRenderer";
 
 function App() {
   return (
     <DashboardLayout>
-      <Overview />
+      <ContentRenderer />
     </DashboardLayout>
   );
 }
