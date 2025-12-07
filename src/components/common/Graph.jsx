@@ -190,6 +190,10 @@ const Graph = ({
                       dataKey={xKey}
                       stroke="#9CA3AF"
                       style={{ fontSize: "12px" }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                      interval={Math.max(0, Math.ceil(data.length / 8) - 1)}
                     />
                     <YAxis stroke="#9CA3AF" style={{ fontSize: "12px" }} />
                   </>
@@ -199,6 +203,9 @@ const Graph = ({
                       dataKey={yKey}
                       stroke="#9CA3AF"
                       style={{ fontSize: "12px" }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
                     />
                     <YAxis
                       stroke="#9CA3AF"
@@ -247,6 +254,10 @@ const Graph = ({
                       dataKey={xKey}
                       stroke="#9CA3AF"
                       style={{ fontSize: "12px" }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                      interval={Math.max(0, Math.ceil(data.length / 8) - 1)}
                     />
                     <YAxis stroke="#9CA3AF" style={{ fontSize: "12px" }} />
                   </>
@@ -256,6 +267,9 @@ const Graph = ({
                       dataKey={yKey}
                       stroke="#9CA3AF"
                       style={{ fontSize: "12px" }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
                     />
                     <YAxis
                       stroke="#9CA3AF"
