@@ -12,6 +12,9 @@ import MetricsTrends from "../sub_links/metrics/Trends";
 import MetricsForecasting from "../sub_links/metrics/Forecasting";
 import MetricsProcesses from "../sub_links/metrics/Processes";
 
+// Scaling sub-components
+import ScalingEvent from "../sub_links/scaling/ScalingEvent";
+
 // Add more imports as needed...
 
 const ContentRenderer = () => {
@@ -29,6 +32,10 @@ const ContentRenderer = () => {
       usage: <MetricsUsage />,
       trends: <MetricsTrends />,
       forecasting: <MetricsForecasting />,
+    },
+    scaling: {
+      event: <ScalingEvent />,
+      // Add more scaling sub-components here...
     },
     projects: {
       // Add project sub-components here...

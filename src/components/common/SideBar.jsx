@@ -33,8 +33,13 @@ const SUB_MENUS = {
     { id: "deployments", label: "Deployments", hasNotification: false },
   ],
   scaling: [
-    { id: "auto", label: "Auto Scaling", hasNotification: false },
-    { id: "manual", label: "Manual Scaling", hasNotification: false },
+    { id: "event", label: "Scaling Event", hasNotification: false },
+    { id: "metrics", label: "Resilience Metrics", hasNotification: false },
+    { id: "rollback", label: "Rollback History", hasNotification: false },
+    { id: "health", label: "Deployment Health", hasNotification: false },
+    { id: "real-time-scaling", label: "Real-Time Scaling", hasNotification: false },
+    { id: "Config", label: "Threshold  Policy Config", hasNotification: false },
+
   ],
   reciliance: [
     { id: "uptime", label: "Uptime", hasNotification: false },
