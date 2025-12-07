@@ -35,8 +35,10 @@ const FilterDropdown = ({ value, onChange, options, placeholder }) => {
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <Icon
-          icon={isOpen ? "mdi:chevron-up" : "mdi:chevron-down"}
-          className="absolute w-5 h-5 text-gray-400 transition-transform duration-200 transform -translate-y-1/2 pointer-events-none dark:text-gray-500 right-3 top-1/2"
+          icon="mdi:chevron-down"
+          className={`absolute w-5 h-5 text-gray-400 dark:text-gray-500 right-3 top-1/2 pointer-events-none transition-transform duration-200 transform -translate-y-1/2 ${
+            isOpen ? "rotate-180" : ""
+          }`}
         />
       </button>
 
@@ -48,7 +50,7 @@ const FilterDropdown = ({ value, onChange, options, placeholder }) => {
               onClick={() => handleSelect(option.value)}
               className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
                 value === option.value
-                  ? "bg-primary/10 text-primary dark:bg-primary/20 font-medium"
+                  ? "bg-primary/10 text-primary dark:bg-primary/20"
                   : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-gray-700/50"
               }`}
             >

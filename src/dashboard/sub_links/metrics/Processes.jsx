@@ -4,6 +4,9 @@ import { processData } from "../../../data";
 import TitleHeader from "../../../components/common/TitleHeader";
 import TabSection from "../../../components/common/TabSection";
 import FilterDropdown from "../../../components/common/FilterDropdown";
+import ClearFilterButton from "../../../components/common/ClearFilterButton";
+import ProcessesTable from "../../../components/metrics/processes/ProcessesTable";
+import ProcessesGraph from "../../../components/metrics/processes/ProcessesGraph";
 
 const MetricsProcesses = () => {
   const [activeTab, setActiveTab] = useState("table");
@@ -97,128 +100,14 @@ const MetricsProcesses = () => {
         />
 
         {/* Clear Filter Button */}
-        <button
-          onClick={handleClearFilter}
-          className="flex items-center px-4 py-2.5 space-x-2 text-sm  text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-darkBackground/60 backdrop-blur-md border border-gray-200 dark:border-gray-600/50 rounded-full transition-all duration-200  hover:bg-white/80 dark:hover:bg-darkBackground/80 focus:outline-none focus:ring-2 focus:ring-primary/50"
-        >
-          <Icon icon="mdi:filter-off-outline" className="w-4 h-4" />
-          <span>Clear Filter</span>
-        </button>
+        <ClearFilterButton onClick={handleClearFilter} />
       </div>
 
       {/* Table Section */}
-      {activeTab === "table" && (
-        <div className="flex-1 overflow-hidden bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-darkBackgroundVery">
-                <tr>
-                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
-                    <div className="flex items-center space-x-1">
-                      <span>Cluster Id</span>
-                      <Icon
-                        icon="mdi:information-outline"
-                        className="w-4 h-4 text-gray-400"
-                      />
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
-                    <div className="flex items-center space-x-1">
-                      <span>Time Stamps</span>
-                      <Icon
-                        icon="mdi:information-outline"
-                        className="w-4 h-4 text-gray-400"
-                      />
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
-                    Window Size
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
-                    Namespace
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
-                    <div className="flex items-center space-x-1">
-                      <span>Service Name</span>
-                      <Icon
-                        icon="mdi:information-outline"
-                        className="w-4 h-4 text-gray-400"
-                      />
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
-                    <div className="flex items-center space-x-1">
-                      <span>Node Name</span>
-                      <Icon
-                        icon="mdi:information-outline"
-                        className="w-4 h-4 text-gray-400"
-                      />
-                    </div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200 dark:bg-darkBackground dark:divide-gray-700">
-                {filteredData.map((item, index) => (
-                  <tr
-                    key={index}
-                    className="transition-colors hover:bg-gray-50 dark:hover:bg-darkBackgroundVery"
-                  >
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap dark:text-gray-200">
-                      {item.clusterId}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap dark:text-gray-300">
-                      {item.timeStamp}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap dark:text-gray-300">
-                      {item.windowSize}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap dark:text-gray-300">
-                      {item.namespace}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap dark:text-gray-300">
-                      {item.serviceName}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap dark:text-gray-300">
-                      {item.nodeName}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {activeTab === "table" && <ProcessesTable data={filteredData} />}
 
-          {/* Empty State */}
-          {filteredData.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Icon
-                icon="mdi:database-off-outline"
-                className="w-16 h-16 text-gray-300 dark:text-gray-600"
-              />
-              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                No data found matching your filters
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Graph View Placeholder */}
-      {activeTab === "graph" && (
-        <div className="flex items-center justify-center flex-1 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
-          <div className="text-center">
-            <Icon
-              icon="mdi:chart-line"
-              className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600"
-            />
-            <p className="mt-4 text-lg font-medium text-gray-900 dark:text-white">
-              Graph View
-            </p>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Visual representation of process data will be displayed here
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Graph View */}
+      {activeTab === "graph" && <ProcessesGraph data={filteredData} />}
     </div>
   );
 };
