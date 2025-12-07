@@ -21,7 +21,7 @@ const SUB_MENUS = {
     { id: "indexes", label: "Indexes", hasNotification: false },
     { id: "explore", label: "Explore", hasNotification: false },
     { id: "configurartions", label: "Configurartions", hasNotification: false },
-    { id: "running-pods", label: "running-pods", hasNotification: false },
+    { id: "running-pods", label: "Running Pods", hasNotification: false },
     { id: "services", label: "Services", hasNotification: false },
     { id: "prometheus-ips", label: "Prometheus IPs", hasNotification: false },
     { id: "monitoring-notes", label: "Monitoring Notes", hasNotification: false },
