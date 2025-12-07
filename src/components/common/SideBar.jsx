@@ -38,8 +38,7 @@ const SUB_MENUS = {
     { id: "rollback", label: "Rollback History", hasNotification: false },
     { id: "health", label: "Deployment Health", hasNotification: false },
     { id: "real-time-scaling", label: "Real-Time Scaling", hasNotification: false },
-    { id: "Config", label: "Threshold  Policy Config", hasNotification: false },
-
+    { id: "config", label: "Threshold Policy Config", hasNotification: false },
   ],
   reciliance: [
     { id: "uptime", label: "Uptime", hasNotification: false },

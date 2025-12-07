@@ -16,6 +16,7 @@ import MetricsProcesses from "../sub_links/metrics/Processes";
 import ScalingEvent from "../sub_links/scaling/ScalingEvent";
 import RollbackHistory from "../sub_links/scaling/RollbackHistory";
 import ResilienceMetrics from "../sub_links/scaling/ResilienceMetrics";
+import ThresholdPolicyConfig from "../sub_links/scaling/ThresholdPolicyConfig";
 
 // Add more imports as needed...
 
@@ -39,6 +40,7 @@ const ContentRenderer = () => {
       event: <ScalingEvent />,
       metrics: <ResilienceMetrics />,
       rollback: <RollbackHistory />,
+      config: <ThresholdPolicyConfig />,
       // Add more scaling sub-components here...
     },
     projects: {
