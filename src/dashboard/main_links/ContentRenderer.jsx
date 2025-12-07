@@ -10,6 +10,7 @@ import MetricsPerformance from "../sub_links/metrics/Performance";
 import MetricsUsage from "../sub_links/metrics/Usage";
 import MetricsTrends from "../sub_links/metrics/Trends";
 import MetricsForecasting from "../sub_links/metrics/Forecasting";
+import MetricsProcesses from "../sub_links/metrics/Processes";
 
 // Add more imports as needed...
 
@@ -23,6 +24,7 @@ const ContentRenderer = () => {
       activity: <OverviewActivity />,
     },
     metrics: {
+      processes: <MetricsProcesses />,
       performance: <MetricsPerformance />,
       usage: <MetricsUsage />,
       trends: <MetricsTrends />,
