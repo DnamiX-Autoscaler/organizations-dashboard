@@ -15,6 +15,7 @@ import MetricsProcesses from "../sub_links/metrics/Processes";
 // Scaling sub-components
 import ScalingEvent from "../sub_links/scaling/ScalingEvent";
 import RollbackHistory from "../sub_links/scaling/RollbackHistory";
+import ResilienceMetrics from "../sub_links/scaling/ResilienceMetrics";
 
 // Add more imports as needed...
 
@@ -36,6 +37,7 @@ const ContentRenderer = () => {
     },
     scaling: {
       event: <ScalingEvent />,
+      metrics: <ResilienceMetrics />,
       rollback: <RollbackHistory />,
       // Add more scaling sub-components here...
     },
