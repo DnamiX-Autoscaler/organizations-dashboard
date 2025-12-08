@@ -2,10 +2,21 @@ import React, { useState } from "react";
 import { Icon } from "@iconify/react";
 import TitleHeader from "../../../components/common/TitleHeader";
 import PerformanceGraph from "../../../components/metrics/performance/PerformanceGraph";
+import FilterDropdown from "../../../components/common/FilterDropdown";
 import performanceData from "../../../data/performanceData";
 
 const Performance = () => {
     const [selectedResource, setSelectedResource] = useState("cpu");
+    const [selectedClusterId, setSelectedClusterId] = useState(performanceData.clusters[0].id);
+
+    // Get current cluster data
+    const currentCluster = performanceData.clusters.find(c => c.id === selectedClusterId);
+
+    // Prepare cluster options for dropdown
+    const clusterOptions = performanceData.clusters.map(cluster => ({
+        value: cluster.id,
+        label: cluster.name,
+    }));
 
     // Resource configurations
     const resourceConfig = {
@@ -13,29 +24,29 @@ const Performance = () => {
             title: "CPU",
             subtitle: "% Utilization",
             color: "#0EA5E9",
-            data: performanceData.cpu.history,
+            data: currentCluster.cpu.history,
             metrics: [
-                { label: "Utilization", value: `${performanceData.cpu.utilization}%` },
-                { label: "Speed", value: `${performanceData.cpu.speed} GHz` },
-                { label: "Processes", value: performanceData.systemInfo.processes },
-                { label: "Threads", value: performanceData.systemInfo.threads },
-                { label: "Cores", value: performanceData.cpu.cores },
-                { label: "Logical processors", value: performanceData.cpu.threads },
-                { label: "Handles", value: performanceData.systemInfo.handles.toLocaleString() },
-                { label: "Up time", value: performanceData.systemInfo.uptime },
+                { label: "Utilization", value: `${currentCluster.cpu.utilization}%` },
+                { label: "Speed", value: `${currentCluster.cpu.speed} GHz` },
+                { label: "Processes", value: currentCluster.systemInfo.processes },
+                { label: "Threads", value: currentCluster.systemInfo.threads },
+                { label: "Cores", value: currentCluster.cpu.cores },
+                { label: "Logical processors", value: currentCluster.cpu.threads },
+                { label: "Handles", value: currentCluster.systemInfo.handles.toLocaleString() },
+                { label: "Up time", value: currentCluster.systemInfo.uptime },
             ],
         },
         memory: {
             title: "Memory",
             subtitle: "GB In Use",
             color: "#10B981",
-            data: performanceData.memory.history,
+            data: currentCluster.memory.history,
             metrics: [
-                { label: "In Use", value: `${performanceData.memory.used} GB (${performanceData.memory.percentage}%)` },
-                { label: "Available", value: `${performanceData.memory.available} GB` },
-                { label: "Total", value: `${performanceData.memory.total} GB` },
-                { label: "Cached", value: `${performanceData.memory.cached} GB` },
-                { label: "Committed", value: `${performanceData.memory.used}/${performanceData.memory.total} GB` },
+                { label: "In Use", value: `${currentCluster.memory.used} GB (${currentCluster.memory.percentage}%)` },
+                { label: "Available", value: `${currentCluster.memory.available} GB` },
+                { label: "Total", value: `${currentCluster.memory.total} GB` },
+                { label: "Cached", value: `${currentCluster.memory.cached} GB` },
+                { label: "Committed", value: `${currentCluster.memory.used}/${currentCluster.memory.total} GB` },
                 { label: "Paged pool", value: "N/A" },
                 { label: "Non-paged pool", value: "N/A" },
                 { label: "Speed", value: "3200 MHz" },
@@ -47,12 +58,12 @@ const Performance = () => {
             color: "#8B5CF6",
             data: [],
             metrics: [
-                { label: "Active Time", value: `${performanceData.disk.activeTime}%` },
-                { label: "Read Speed", value: `${performanceData.disk.readSpeed} MB/s` },
-                { label: "Write Speed", value: `${performanceData.disk.writeSpeed} MB/s` },
-                { label: "Total Capacity", value: `${performanceData.disk.totalCapacity} GB` },
-                { label: "Used", value: `${performanceData.disk.used} GB` },
-                { label: "Available", value: `${performanceData.disk.totalCapacity - performanceData.disk.used} GB` },
+                { label: "Active Time", value: `${currentCluster.disk.activeTime}%` },
+                { label: "Read Speed", value: `${currentCluster.disk.readSpeed} MB/s` },
+                { label: "Write Speed", value: `${currentCluster.disk.writeSpeed} MB/s` },
+                { label: "Total Capacity", value: `${currentCluster.disk.totalCapacity} GB` },
+                { label: "Used", value: `${currentCluster.disk.used} GB` },
+                { label: "Available", value: `${currentCluster.disk.totalCapacity - currentCluster.disk.used} GB` },
                 { label: "Type", value: "Persistent Volume Claims" },
                 { label: "Storage Class", value: "managed-premium" },
             ],
@@ -63,10 +74,10 @@ const Performance = () => {
             color: "#F59E0B",
             data: [],
             metrics: [
-                { label: "Send", value: `${performanceData.network.send} Kbps` },
-                { label: "Receive", value: `${performanceData.network.receive} Kbps` },
-                { label: "Total Throughput", value: `${performanceData.network.send + performanceData.network.receive} Kbps` },
-                { label: "Connections", value: performanceData.network.connections },
+                { label: "Send", value: `${currentCluster.network.send} Kbps` },
+                { label: "Receive", value: `${currentCluster.network.receive} Kbps` },
+                { label: "Total Throughput", value: `${currentCluster.network.send + currentCluster.network.receive} Kbps` },
+                { label: "Connections", value: currentCluster.network.connections },
                 { label: "Network Type", value: "Virtual Network" },
                 { label: "Adapter", value: "Azure Virtual Network" },
                 { label: "Link Speed", value: "10 Gbps" },
@@ -79,10 +90,20 @@ const Performance = () => {
 
     return (
         <div className="flex flex-col h-full">
-            <TitleHeader
-                title="Performance"
-                subtitle="Real-time cluster and resource monitoring"
-            />
+            <div className="flex items-center justify-between mb-6">
+                <TitleHeader
+                    title="Performance"
+                    subtitle="Real-time cluster and resource monitoring"
+                />
+                
+                {/* Cluster Selector */}
+                <FilterDropdown
+                    value={selectedClusterId}
+                    onChange={setSelectedClusterId}
+                    options={clusterOptions}
+                    placeholder="Select Cluster"
+                />
+            </div>
 
             <div className="flex h-full gap-4">
                 {/* Left Panel - Resource Cards */}
@@ -97,7 +118,7 @@ const Performance = () => {
                     >
                         <div className="w-16 h-16">
                             <PerformanceGraph
-                                data={performanceData.cpu.history}
+                                data={currentCluster.cpu.history}
                                 color="#3B82F6"
                                 height={64}
                             />
@@ -107,8 +128,7 @@ const Performance = () => {
                                 CPU
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {performanceData.cpu.utilization}% {performanceData.cpu.speed}{" "}
-                                GHz
+                                {currentCluster.cpu.utilization}% {currentCluster.cpu.speed} GHz
                             </div>
                         </div>
                     </div>
@@ -123,7 +143,7 @@ const Performance = () => {
                     >
                         <div className="w-16 h-16">
                             <PerformanceGraph
-                                data={performanceData.memory.history}
+                                data={currentCluster.memory.history}
                                 color="#10B981"
                                 height={64}
                             />
@@ -133,8 +153,7 @@ const Performance = () => {
                                 Memory
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {performanceData.memory.used}/{performanceData.memory.total} GB (
-                                {performanceData.memory.percentage}%)
+                                {currentCluster.memory.used}/{currentCluster.memory.total} GB ({currentCluster.memory.percentage}%)
                             </div>
                         </div>
                     </div>
@@ -155,7 +174,7 @@ const Performance = () => {
                                 Disk (PVC)
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {performanceData.disk.activeTime}%
+                                {currentCluster.disk.activeTime}%
                             </div>
                         </div>
                     </div>
@@ -175,11 +194,10 @@ const Performance = () => {
                         </div>
                         <div className="flex-1">
                             <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                {performanceData.network.name}
+                                Network
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
-                                S: {performanceData.network.send} R:{" "}
-                                {performanceData.network.receive} Kbps
+                                S: {currentCluster.network.send} R: {currentCluster.network.receive} Kbps
                             </div>
                         </div>
                     </div>
@@ -193,7 +211,7 @@ const Performance = () => {
                                 {currentConfig.title}
                             </h2>
                             <div className="text-sm text-gray-500 dark:text-gray-400">
-                                {performanceData.cluster.name}
+                                {currentCluster.name}
                             </div>
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -248,7 +266,7 @@ const Performance = () => {
                                 Total Nodes
                             </div>
                             <div className="text-lg font-bold text-gray-900 dark:text-white">
-                                {performanceData.cluster.totalNodes}
+                                {currentCluster.totalNodes}
                             </div>
                         </div>
                         <div>
@@ -256,7 +274,7 @@ const Performance = () => {
                                 Total Pods
                             </div>
                             <div className="text-lg font-bold text-gray-900 dark:text-white">
-                                {performanceData.cluster.totalPods}
+                                {currentCluster.totalPods}
                             </div>
                         </div>
                         <div>
@@ -264,7 +282,7 @@ const Performance = () => {
                                 Total Memory
                             </div>
                             <div className="text-lg font-bold text-gray-900 dark:text-white">
-                                {performanceData.cluster.totalMemory} GB
+                                {currentCluster.totalMemory} GB
                             </div>
                         </div>
                     </div>
