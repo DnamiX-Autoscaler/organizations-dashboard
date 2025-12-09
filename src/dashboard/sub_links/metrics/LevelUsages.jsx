@@ -1,20 +1,22 @@
 import React, { useState } from "react";
 import { Icon } from "@iconify/react";
-import { processData } from "../../../data";
+import { nodeLevel, podLevel, appLevel, serviceMeshLevel } from "../../../data";
 import TitleHeader from "../../../components/common/TitleHeader";
 import TabSection from "../../../components/common/TabSection";
-import FilterDropdown from "../../../components/common/FilterDropdown";
-import ClearFilterButton from "../../../components/common/ClearFilterButton";
-import ProcessesTable from "../../../components/metrics/processes/ProcessesTable";
-import ProcessesGraph from "../../../components/metrics/processes/ProcessesGraph";
+import NodeLevel from "../../../components/metrics/level_usages/node_level/NodeLevel";
+import PodLevel from "../../../components/metrics/level_usages/pod_level/PodLevel";
+import AppLevel from "../../../components/metrics/level_usages/app_level/AppLevel";
+import ServiceMeshLevel from "../../../components/metrics/level_usages/service_mesh_level/ServiceMeshLevel";
+
 
 const LevelUsages = () => {
-  const [activeTab, setActiveTab] = useState("table");
-
+  const [activeTab, setActiveTab] = useState("node");
 
   const tabs = [
-    { key: "table", label: "Table", icon: "mdi:table" },
-    { key: "graph", label: "Graph", icon: "mdi:chart-line" },
+    { key: "node", label: "Node Level", icon: "mdi:server" },
+    { key: "pod", label: "Pod Level", icon: "mdi:cube-outline" },
+    { key: "app", label: "Application Level", icon: "mdi:application" },
+    { key: "serviceMesh", label: "Service Mesh Level", icon: "mdi:vector-link" },
   ];
 
   return (
@@ -31,13 +33,15 @@ const LevelUsages = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
-      
 
-      {/* Table Section */}
-      {activeTab === "table" && <ProcessesTable  />}
-
-      {/* Graph View */}
-      {activeTab === "graph" && <ProcessesGraph  />}
+      {/* Node Level */}
+      {activeTab === "node" && <NodeLevel />}
+      {/* Pod Level */}
+      {activeTab === "pod" && <PodLevel />}
+      {/* Application Level */}
+      {activeTab === "app" && <AppLevel />}
+      {/* Service Mesh Level */}
+      {activeTab === "serviceMesh" && <ServiceMeshLevel />}
     </div>
   );
 };
