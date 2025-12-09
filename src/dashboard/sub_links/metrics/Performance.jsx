@@ -1,11 +1,9 @@
 import React, { useState } from "react";
-import { Icon } from "@iconify/react";
 import TitleHeader from "../../../components/common/TitleHeader";
-import PerformanceGraph from "../../../components/metrics/performance/PerformanceGraph";
 import FilterDropdown from "../../../components/common/FilterDropdown";
 import ResourceCard from "../../../components/metrics/performance/ResourceCard";
 import DetailedView from "../../../components/metrics/performance/DetailedView";
-import performanceData from "../../../data/performanceData";
+import { performanceData } from "../../../data";
 import getResourceConfig from "../../../components/metrics/performance/resourceConfig";
 import getResourceCards from "../../../components/metrics/performance/resourceCards";
 

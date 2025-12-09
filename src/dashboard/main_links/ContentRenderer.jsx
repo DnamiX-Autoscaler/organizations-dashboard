@@ -11,6 +11,7 @@ import MetricsUsage from "../sub_links/metrics/Usage";
 import MetricsTrends from "../sub_links/metrics/Trends";
 import MetricsForecasting from "../sub_links/metrics/Forecasting";
 import MetricsProcesses from "../sub_links/metrics/Processes";
+import LevelUsages from "../sub_links/metrics/LevelUsages";
 
 // Add more imports as needed...
 
@@ -26,7 +27,7 @@ const ContentRenderer = () => {
     metrics: {
       processes: <MetricsProcesses />,
       performance: <MetricsPerformance />,
-      usage: <MetricsUsage />,
+      [`level-usages`]: <LevelUsages />,
       trends: <MetricsTrends />,
       forecasting: <MetricsForecasting />,
     },
