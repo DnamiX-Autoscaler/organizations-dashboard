@@ -15,7 +15,7 @@ const Table = ({ columns, data, empty }) => (
                 <div className="flex items-center space-x-1">
                   <span>{col.label}</span>
                   {col.icon && (
-                    <Icon icon={col.icon} className="w-4 h-4 text-gray-400" />
+                    <Icon icon={col.icon} className="w-4 h-4 text-green-400" />
                   )}
                 </div>
               </th>
@@ -31,11 +31,10 @@ const Table = ({ columns, data, empty }) => (
               {columns.map((col) => (
                 <td
                   key={col.key}
-                  className={`px-6 py-4 text-sm whitespace-nowrap ${
-                    col.bold
+                  className={`px-6 py-4 text-sm whitespace-nowrap ${col.bold
                       ? "font-medium text-gray-900 dark:text-gray-200"
                       : "text-gray-600 dark:text-gray-300"
-                  }`}
+                    }`}
                 >
                   {row[col.key]}
                 </td>

@@ -8,7 +8,6 @@ import PodLevel from "../../../components/metrics/level_usages/pod_level/PodLeve
 import AppLevel from "../../../components/metrics/level_usages/app_level/AppLevel";
 import ServiceMeshLevel from "../../../components/metrics/level_usages/service_mesh_level/ServiceMeshLevel";
 
-
 const LevelUsages = () => {
   const [activeTab, setActiveTab] = useState("node");
 
@@ -16,7 +15,11 @@ const LevelUsages = () => {
     { key: "node", label: "Node Level", icon: "mdi:server" },
     { key: "pod", label: "Pod Level", icon: "mdi:cube-outline" },
     { key: "app", label: "Application Level", icon: "mdi:application" },
-    { key: "serviceMesh", label: "Service Mesh Level", icon: "mdi:vector-link" },
+    {
+      key: "serviceMesh",
+      label: "Service Mesh Level",
+      icon: "mdi:vector-link",
+    },
   ];
 
   return (
@@ -35,13 +38,15 @@ const LevelUsages = () => {
       />
 
       {/* Node Level */}
-      {activeTab === "node" && <NodeLevel />}
+      {activeTab === "node" && <NodeLevel data={nodeLevel} />}
       {/* Pod Level */}
-      {activeTab === "pod" && <PodLevel />}
+      {activeTab === "pod" && <PodLevel data={podLevel} />}
       {/* Application Level */}
-      {activeTab === "app" && <AppLevel />}
+      {activeTab === "app" && <AppLevel data={appLevel} />}
       {/* Service Mesh Level */}
-      {activeTab === "serviceMesh" && <ServiceMeshLevel />}
+      {activeTab === "serviceMesh" && (
+        <ServiceMeshLevel data={serviceMeshLevel} />
+      )}
     </div>
   );
 };
