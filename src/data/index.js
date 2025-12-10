@@ -11,7 +11,6 @@ import appLevel from "./appLevel";
 import serviceMeshLevel from "./serviceMeshLevel";
 
 export {
-  processData,
   performanceData,
   nodeLevel,
   podLevel,
