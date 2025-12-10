@@ -1,0 +1,40 @@
+const appLevelData = [
+    {
+        request_rate_rps: 1200,
+        success_rate_percent: 98.5,
+        error_rate_percent: 1.5,
+        http_4xx_rate_percent: 0.8,
+        http_5xx_rate_percent: 0.7,
+        latency_p50_ms: 45,
+        latency_p95_ms: 120,
+        latency_p99_ms: 250,
+        queue_length: 8,
+        application_saturation_percent: 70,
+    },
+    {
+        request_rate_rps: 950,
+        success_rate_percent: 97.2,
+        error_rate_percent: 2.8,
+        http_4xx_rate_percent: 1.5,
+        http_5xx_rate_percent: 1.3,
+        latency_p50_ms: 60,
+        latency_p95_ms: 150,
+        latency_p99_ms: 300,
+        queue_length: 12,
+        application_saturation_percent: 80,
+    },
+    {
+        request_rate_rps: 1500,
+        success_rate_percent: 99.1,
+        error_rate_percent: 0.9,
+        http_4xx_rate_percent: 0.4,
+        http_5xx_rate_percent: 0.5,
+        latency_p50_ms: 38,
+        latency_p95_ms: 100,
+        latency_p99_ms: 200,
+        queue_length: 5,
+        application_saturation_percent: 65,
+    },
+];
+
+export default appLevelData;
