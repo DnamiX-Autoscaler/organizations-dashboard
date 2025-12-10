@@ -27,6 +27,17 @@ const RealTimeScaling = () => {
         { time: "now", count: 28 },
     ]);
 
+    // Live deployment usage percentages
+    const [liveUsage, setLiveUsage] = useState(
+        deployments.reduce((acc, dep) => {
+            acc[dep.name] = {
+                cpu: dep.cpuUsage,
+                memory: dep.memoryUsage
+            };
+            return acc;
+        }, {})
+    );
+
     // Calculate summary statistics
     const totalDeployments = deployments.length;
     const totalReplicas = deployments.reduce((sum, d) => sum + d.currentReplicas, 0);
@@ -41,6 +52,61 @@ const RealTimeScaling = () => {
             setCurrentTime(new Date());
         }, 1000);
         return () => clearInterval(timer);
+    }, []);
+
+    // Auto-update graph data every 3 seconds to show movement
+    useEffect(() => {
+        const graphTimer = setInterval(() => {
+            // Update CPU data with random fluctuations
+            setCpuData(prevData => {
+                const newData = [...prevData];
+                newData.shift(); // Remove first item
+                const lastValue = newData[newData.length - 1].value;
+                const newValue = Math.max(40, Math.min(85, lastValue + (Math.random() - 0.5) * 10));
+                newData.push({ time: "now", value: Math.round(newValue) });
+                return newData;
+            });
+
+            // Update Replica data with occasional changes
+            setReplicaData(prevData => {
+                const newData = [...prevData];
+                newData.shift(); // Remove first item
+                const lastValue = newData[newData.length - 1].count;
+                const change = Math.random() > 0.7 ? (Math.random() > 0.5 ? 1 : -1) : 0;
+                const newValue = Math.max(20, Math.min(32, lastValue + change));
+                newData.push({ time: "now", count: newValue });
+                return newData;
+            });
+        }, 3000); // Update every 3 seconds
+
+        return () => clearInterval(graphTimer);
+    }, []);
+
+    // Auto-update deployment usage percentages every 4 seconds
+    useEffect(() => {
+        const usageTimer = setInterval(() => {
+            setLiveUsage(prevUsage => {
+                const newUsage = { ...prevUsage };
+                Object.keys(newUsage).forEach(deploymentName => {
+                    // Small random fluctuations for CPU (±2-5%) with decimal precision
+                    const cpuChange = (Math.random() - 0.5) * 5;
+                    const newCpu = newUsage[deploymentName].cpu + cpuChange;
+                    newUsage[deploymentName].cpu = Math.max(30, Math.min(90,
+                        parseFloat(newCpu.toFixed(1))
+                    ));
+
+                    // Small random fluctuations for Memory (±1-3%) with decimal precision
+                    const memChange = (Math.random() - 0.5) * 3;
+                    const newMem = newUsage[deploymentName].memory + memChange;
+                    newUsage[deploymentName].memory = Math.max(40, Math.min(85,
+                        parseFloat(newMem.toFixed(1))
+                    ));
+                });
+                return newUsage;
+            });
+        }, 4000); // Update every 4 seconds
+
+        return () => clearInterval(usageTimer);
     }, []);
 
     // Format timestamp
@@ -304,13 +370,13 @@ const RealTimeScaling = () => {
                                             <div className="flex items-center justify-between text-xs mb-1.5">
                                                 <span className="font-medium text-gray-600 dark:text-gray-400">CPU Usage</span>
                                                 <span className="font-bold text-gray-900 dark:text-gray-100">
-                                                    {deployment.cpuUsage}%
+                                                    {liveUsage[deployment.name]?.cpu || deployment.cpuUsage}%
                                                 </span>
                                             </div>
                                             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                                                 <div
-                                                    className="bg-primary h-2 rounded-full transition-all duration-500"
-                                                    style={{ width: `${deployment.cpuUsage}%` }}
+                                                    className="bg-primary h-2 rounded-full transition-all duration-1000 ease-in-out"
+                                                    style={{ width: `${liveUsage[deployment.name]?.cpu || deployment.cpuUsage}%` }}
                                                 ></div>
                                             </div>
                                         </div>
@@ -318,13 +384,13 @@ const RealTimeScaling = () => {
                                             <div className="flex items-center justify-between text-xs mb-1.5">
                                                 <span className="font-medium text-gray-600 dark:text-gray-400">Memory Usage</span>
                                                 <span className="font-bold text-gray-900 dark:text-gray-100">
-                                                    {deployment.memoryUsage}%
+                                                    {liveUsage[deployment.name]?.memory || deployment.memoryUsage}%
                                                 </span>
                                             </div>
                                             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                                                 <div
-                                                    className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-500"
-                                                    style={{ width: `${deployment.memoryUsage}%` }}
+                                                    className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-1000 ease-in-out"
+                                                    style={{ width: `${liveUsage[deployment.name]?.memory || deployment.memoryUsage}%` }}
                                                 ></div>
                                             </div>
                                         </div>
@@ -372,8 +438,8 @@ const RealTimeScaling = () => {
                                     <div
                                         key={index}
                                         className={`p-3 rounded-lg border ${isVeryRecent
-                                                ? "bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800"
-                                                : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                                            ? "bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800"
+                                            : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
                                             }`}
                                     >
                                         <div className="flex items-center gap-2 mb-2">

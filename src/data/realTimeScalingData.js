@@ -45,28 +45,7 @@ const realTimeScalingData = {
             cpuUsage: 28,
             memoryUsage: 35,
         },
-        {
-            name: "analytics-service",
-            currentReplicas: 6,
-            desiredReplicas: 6,
-            trend: "stable",
-            status: "healthy",
-            lastScalingTime: "2025-12-10T19:15:10.000000+00:00",
-            lastAction: "Scale up",
-            cpuUsage: 55,
-            memoryUsage: 61,
-        },
-        {
-            name: "auth-service",
-            currentReplicas: 2,
-            desiredReplicas: 2,
-            trend: "stable",
-            status: "healthy",
-            lastScalingTime: "2025-12-10T17:20:05.000000+00:00",
-            lastAction: "Stable",
-            cpuUsage: 38,
-            memoryUsage: 42,
-        },
+       
     ],
 
     recentActivity: [
