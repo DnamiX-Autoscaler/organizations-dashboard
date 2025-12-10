@@ -18,6 +18,7 @@ import ScalingEvent from "../sub_links/scaling/ScalingEvent";
 import RollbackHistory from "../sub_links/scaling/RollbackHistory";
 import ResilienceMetrics from "../sub_links/scaling/ResilienceMetrics";
 import ThresholdPolicyConfig from "../sub_links/scaling/ThresholdPolicyConfig";
+import RealTimeScaling from "../sub_links/scaling/RealTimeScaling";
 
 // Add more imports as needed...
 
@@ -41,6 +42,7 @@ const ContentRenderer = () => {
       event: <ScalingEvent />,
       metrics: <ResilienceMetrics />,
       rollback: <RollbackHistory />,
+      "real-time-scaling": <RealTimeScaling />,
       config: <ThresholdPolicyConfig />,
       // Add more scaling sub-components here...
     },
