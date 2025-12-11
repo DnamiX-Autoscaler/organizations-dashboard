@@ -5,6 +5,7 @@ import graphCentralityData from "../../../data/graphCentrality";
 import CentralityCard from "../../../components/metrics/graph_centrality/CentralityCard";
 import ServiceCentralityTable from "../../../components/metrics/graph_centrality/ServiceCentralityTable";
 import CentralityComparison from "../../../components/metrics/graph_centrality/CentralityComparison";
+import ViewModeToggle from "../../../components/metrics/graph_centrality/ViewModeToggle";
 
 const GraphCentrality = () => {
   const [data, setData] = useState(graphCentralityData);
@@ -78,52 +79,7 @@ const GraphCentrality = () => {
         />
 
         {/* View Mode Toggle */}
-        <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-lg dark:bg-darkBackgroundVery">
-          <button
-            onClick={() => setViewMode("overview")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${
-              viewMode === "overview"
-                ? "bg-white dark:bg-darkBackground text-primary shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-            }`}
-          >
-            <Icon icon="mdi:view-dashboard" className="w-4 h-4" />
-            Overview
-          </button>
-          <button
-            onClick={() => setViewMode("table")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${
-              viewMode === "table"
-                ? "bg-white dark:bg-darkBackground text-primary shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-            }`}
-          >
-            <Icon icon="mdi:table" className="w-4 h-4" />
-            Table
-          </button>
-          <button
-            onClick={() => setViewMode("comparison")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${
-              viewMode === "comparison"
-                ? "bg-white dark:bg-darkBackground text-primary shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-            }`}
-          >
-            <Icon icon="mdi:chart-radar" className="w-4 h-4" />
-            Comparison
-          </button>
-          <button
-            onClick={() => setViewMode("guide")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${
-              viewMode === "guide"
-                ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg"
-                : "bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600"
-            }`}
-          >
-            <Icon icon="mdi:book-open-variant" className="w-4 h-4" />
-            Guide
-          </button>
-        </div>
+        <ViewModeToggle viewMode={viewMode} setViewMode={setViewMode} />
       </div>
 
       {/* Live Indicator */}
