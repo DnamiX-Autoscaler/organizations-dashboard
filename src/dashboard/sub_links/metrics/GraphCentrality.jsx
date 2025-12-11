@@ -185,7 +185,7 @@ const GraphCentrality = () => {
           <CentralityComparison services={data.services} />
 
           {/* ML Benefits Explanation */}
-          <MLBenefitsExplanation />
+          {/* <MLBenefitsExplanation /> */}
         </div>
       )}
 
