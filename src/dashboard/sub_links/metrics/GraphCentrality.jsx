@@ -6,6 +6,7 @@ import CentralityCard from "../../../components/metrics/graph_centrality/Central
 import ServiceCentralityTable from "../../../components/metrics/graph_centrality/ServiceCentralityTable";
 import CentralityComparison from "../../../components/metrics/graph_centrality/CentralityComparison";
 import ViewModeToggle from "../../../components/metrics/graph_centrality/ViewModeToggle";
+import SystemInsights from "../../../components/metrics/graph_centrality/SystemInsights";
 
 const GraphCentrality = () => {
   const [data, setData] = useState(graphCentralityData);
@@ -94,7 +95,7 @@ const GraphCentrality = () => {
 
       {/* Research Novelty Highlight */}
       {viewMode !== "guide" && (
-        <div className="p-6 border-l-4 border-purple-500 rounded-lg bg-purple-50 dark:bg-purple-900/20 dark:border-purple-400">
+        <div className="p-6 border rounded-lg border-purple-500/50 bg-purple-50 dark:bg-purple-900/20 dark:border-purple-400/50">
           <div className="flex items-start gap-3">
             <Icon
               icon="mdi:lightbulb-on"
@@ -102,7 +103,7 @@ const GraphCentrality = () => {
             />
             <div>
               <h3 className="mb-2 text-lg font-semibold text-purple-900 dark:text-purple-200">
-                Research Innovation: Graph-Based ML Scaling
+                Graph-Based ML Scaling
               </h3>
               <p className="text-sm text-purple-700 dark:text-purple-300">
                 This system uses graph centrality metrics to predict service
@@ -160,73 +161,7 @@ const GraphCentrality = () => {
           </div>
 
           {/* System Insights */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="p-6 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
-                  <Icon
-                    icon="mdi:alert-circle"
-                    className="w-6 h-6 text-red-600 dark:text-red-400"
-                  />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {data.insights.critical_services}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Critical Services
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-300">
-                Services requiring immediate scaling attention
-              </p>
-            </div>
-
-            <div className="p-6 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
-                  <Icon
-                    icon="mdi:traffic-cone"
-                    className="w-6 h-6 text-yellow-600 dark:text-yellow-400"
-                  />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {data.insights.bottleneck_services}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Bottleneck Services
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-300">
-                Identified through betweenness centrality
-              </p>
-            </div>
-
-            <div className="p-6 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
-                  <Icon
-                    icon="mdi:heart-pulse"
-                    className="w-6 h-6 text-green-600 dark:text-green-400"
-                  />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {data.insights.system_health}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    System Health
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-300">
-                Overall architecture stability score
-              </p>
-            </div>
-          </div>
+          <SystemInsights insights={data.insights} />
 
           {/* Service Table */}
           <ServiceCentralityTable services={data.services} />
