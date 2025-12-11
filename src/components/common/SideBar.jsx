@@ -2,6 +2,7 @@ import React from "react";
 import SideBarOne from "./side_bar/SideBarOne";
 import SideBarTwo from "./side_bar/SideBarTwo";
 import { useRoute } from "../../utils/RouteContext";
+import { alertsData } from "../../data";
 
 // Define sub-menu items for each main menu id
 const SUB_MENUS = {
@@ -38,6 +39,7 @@ const SUB_MENUS = {
     { id: "rollback", label: "Rollback History", hasNotification: false },
     { id: "health", label: "Deployment Health", hasNotification: false },
     { id: "real-time-scaling", label: "Real-Time Scaling", hasNotification: false },
+    { id: "alerts", label: "Alerts", hasNotification: true },
     { id: "config", label: "Threshold Policy Config", hasNotification: false },
   ],
   reciliance: [
@@ -91,6 +93,15 @@ const MAIN_MENU_LABELS = {
 const SideBar = ({ isCollapsed, onToggle }) => {
   const { activeMain, activeSub, setActiveMain, setActiveSub } = useRoute();
 
+  const unreadAlerts = alertsData.filter((a) => a.status !== "resolved").length;
+  const dynamicScalingMenu = SUB_MENUS.scaling.map((item) =>
+    item.id === "alerts"
+      ? { ...item, count: unreadAlerts, hasNotification: unreadAlerts > 0 }
+      : item
+  );
+  const currentSubMenu =
+    activeMain === "scaling" ? dynamicScalingMenu : SUB_MENUS[activeMain];
+
   const handleMainChange = (id) => {
     setActiveMain(id);
     setActiveSub(SUB_MENUS[id][0]?.id);
@@ -113,6 +124,7 @@ const SideBar = ({ isCollapsed, onToggle }) => {
           isCollapsed={isCollapsed}
           onToggle={onToggle}
           activeItem={activeMain}
+          unreadScalingCount={unreadAlerts}
           onActiveChange={handleMainChange}
         />
       </div>
@@ -126,7 +138,7 @@ const SideBar = ({ isCollapsed, onToggle }) => {
         {!isCollapsed && (
           <SideBarTwo
             title={MAIN_MENU_LABELS[activeMain]}
-            subMenuItems={SUB_MENUS[activeMain]}
+            subMenuItems={currentSubMenu}
             activeSubItem={activeSub}
             onSubChange={handleSubChange}
           />

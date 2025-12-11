@@ -2,8 +2,9 @@ import processData from "./processData";
 import scalingEventsData from "./scalingEventsData";
 import rollbackHistoryData from "./rollbackHistoryData";
 import realTimeScalingData from "./realTimeScalingData";
+import alertsData from "./alertsData";
 
-export { processData, scalingEventsData, rollbackHistoryData, realTimeScalingData };
+export { processData, scalingEventsData, rollbackHistoryData, realTimeScalingData, alertsData };
 
 import performanceData from "./performanceData";
 import nodeLevel from "./nodeLevel";

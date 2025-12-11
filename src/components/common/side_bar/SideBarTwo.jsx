@@ -54,8 +54,12 @@ const SideBarTwo = ({ title, subMenuItems, activeSubItem, onSubChange }) => {
               }`}
             >
               <span>{item.label}</span>
-              {item.hasNotification && (
-                <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+              {item.count > 0 ? (
+                <span className="min-w-[18px] h-5 px-1.5 text-[11px] font-bold text-white bg-red-500 rounded-full flex items-center justify-center">
+                  {item.count}
+                </span>
+              ) : (
+                item.hasNotification && <span className="w-2 h-2 bg-red-500 rounded-full"></span>
               )}
             </button>
           ))}
