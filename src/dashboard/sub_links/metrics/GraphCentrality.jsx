@@ -7,6 +7,8 @@ import ServiceCentralityTable from "../../../components/metrics/graph_centrality
 import CentralityComparison from "../../../components/metrics/graph_centrality/CentralityComparison";
 import ViewModeToggle from "../../../components/metrics/graph_centrality/ViewModeToggle";
 import SystemInsights from "../../../components/metrics/graph_centrality/SystemInsights";
+import AdditionalInsights from "../../../components/metrics/graph_centrality/AdditionalInsights";
+import MLBenefitsExplanation from "../../../components/metrics/graph_centrality/MLBenefitsExplanation";
 
 const GraphCentrality = () => {
   const [data, setData] = useState(graphCentralityData);
@@ -172,70 +174,7 @@ const GraphCentrality = () => {
       {viewMode === "table" && (
         <div className="space-y-6">
           <ServiceCentralityTable services={data.services} />
-
-          {/* Additional Insights */}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="p-6 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
-              <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-                Top Services by Degree Centrality
-              </h3>
-              <div className="space-y-3">
-                {[...data.services]
-                  .sort((a, b) => b.degree_centrality - a.degree_centrality)
-                  .slice(0, 5)
-                  .map((service, index) => (
-                    <div
-                      key={service.id}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-blue-500 rounded-full">
-                          {index + 1}
-                        </span>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {service.name}
-                        </span>
-                      </div>
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        {(service.degree_centrality * 100).toFixed(1)}%
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            <div className="p-6 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
-              <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-                Top Bottleneck Services
-              </h3>
-              <div className="space-y-3">
-                {[...data.services]
-                  .sort(
-                    (a, b) =>
-                      b.betweenness_centrality - a.betweenness_centrality
-                  )
-                  .slice(0, 5)
-                  .map((service, index) => (
-                    <div
-                      key={service.id}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-green-500 rounded-full">
-                          {index + 1}
-                        </span>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {service.name}
-                        </span>
-                      </div>
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        {(service.betweenness_centrality * 100).toFixed(1)}%
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
+          <AdditionalInsights services={data.services} />
         </div>
       )}
 
@@ -245,63 +184,7 @@ const GraphCentrality = () => {
           <CentralityComparison services={data.services} />
 
           {/* ML Benefits Explanation */}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <div className="p-6 border-l-4 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-              <Icon
-                icon="mdi:graph-outline"
-                className="w-8 h-8 mb-3 text-blue-600 dark:text-blue-400"
-              />
-              <h4 className="mb-2 text-sm font-semibold text-blue-900 dark:text-blue-200">
-                Degree → Load Exposure
-              </h4>
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                ML learns which high-dependency services need early scaling
-                before CPU spikes occur.
-              </p>
-            </div>
-
-            <div className="p-6 border-l-4 border-green-500 rounded-lg bg-green-50 dark:bg-green-900/20">
-              <Icon
-                icon="mdi:transit-connection-variant"
-                className="w-8 h-8 mb-3 text-green-600 dark:text-green-400"
-              />
-              <h4 className="mb-2 text-sm font-semibold text-green-900 dark:text-green-200">
-                Betweenness → Bottlenecks
-              </h4>
-              <p className="text-xs text-green-700 dark:text-green-300">
-                Predicts cascade failures by identifying critical path services
-                that service-mesh logs cannot detect.
-              </p>
-            </div>
-
-            <div className="p-6 border-l-4 border-orange-500 rounded-lg bg-orange-50 dark:bg-orange-900/20">
-              <Icon
-                icon="mdi:network-strength-4"
-                className="w-8 h-8 mb-3 text-orange-600 dark:text-orange-400"
-              />
-              <h4 className="mb-2 text-sm font-semibold text-orange-900 dark:text-orange-200">
-                Closeness → Propagation
-              </h4>
-              <p className="text-xs text-orange-700 dark:text-orange-300">
-                Forecasts latency spread speed across the system—impossible with
-                traditional metrics alone.
-              </p>
-            </div>
-
-            <div className="p-6 border-l-4 border-purple-500 rounded-lg bg-purple-50 dark:bg-purple-900/20">
-              <Icon
-                icon="mdi:vector-circle"
-                className="w-8 h-8 mb-3 text-purple-600 dark:text-purple-400"
-              />
-              <h4 className="mb-2 text-sm font-semibold text-purple-900 dark:text-purple-200">
-                Eigenvector → Influence
-              </h4>
-              <p className="text-xs text-purple-700 dark:text-purple-300">
-                Identifies "silent influencers" for prioritized scaling—a
-                dimension raw logs cannot provide.
-              </p>
-            </div>
-          </div>
+          <MLBenefitsExplanation />
         </div>
       )}
 
@@ -310,6 +193,9 @@ const GraphCentrality = () => {
         <div className="space-y-8">
           {/* Introduction */}
           <section>
+            <div className="mb-8">
+              <MLBenefitsExplanation />
+            </div>
             <div className="p-6 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
               <h3 className="flex items-center gap-2 mb-4 text-2xl font-bold text-gray-900 dark:text-white">
                 <Icon
@@ -334,6 +220,7 @@ const GraphCentrality = () => {
               </div>
             </div>
           </section>
+          import MLBenefitsExplanation from "../../../components/metrics/graph_centrality/MLBenefitsExplanation";
 
           {/* Four Centrality Types */}
           <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
