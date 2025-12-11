@@ -220,7 +220,7 @@ const GraphCentrality = () => {
               </div>
             </div>
           </section>
-          import MLBenefitsExplanation from "../../../components/metrics/graph_centrality/MLBenefitsExplanation";
+
 
           {/* Four Centrality Types */}
           <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
