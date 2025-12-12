@@ -74,7 +74,7 @@ const GraphCentrality = () => {
   };
 
   return (
-    <div className="flex flex-col flex-1 gap-6 p-6">
+    <div className="flex flex-col flex-1 gap-6">
       {/* Header Section */}
       <div className="flex items-center justify-between">
         <TitleHeader

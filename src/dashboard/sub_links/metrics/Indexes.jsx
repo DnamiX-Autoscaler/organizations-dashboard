@@ -108,7 +108,7 @@ const Indexes = () => {
   }, []);
 
   return (
-    <div className="flex flex-col flex-1 gap-6 p-6">
+    <div className="flex flex-col flex-1 gap-6">
       {/* Header */}
       <TitleHeader
         title="Pressure Indexes & Scaling Recommendations"
