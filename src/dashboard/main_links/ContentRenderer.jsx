@@ -7,10 +7,10 @@ import OverviewActivity from "../sub_links/overview/Activity";
 
 // Metrics sub-components
 import MetricsPerformance from "../sub_links/metrics/Performance";
-import MetricsForecasting from "../sub_links/metrics/Forecasting";
 import MetricsProcesses from "../sub_links/metrics/Processes";
 import LevelUsages from "../sub_links/metrics/LevelUsages";
 import GraphCentrality from "../sub_links/metrics/GraphCentrality";
+import Indexes from "../sub_links/metrics/Indexes";
 
 // Add more imports as needed...
 
@@ -28,7 +28,7 @@ const ContentRenderer = () => {
       performance: <MetricsPerformance />,
       [`level-usages`]: <LevelUsages />,
       [`graph-centrality`]: <GraphCentrality />,
-      forecasting: <MetricsForecasting />,
+      indexes: <Indexes />,
     },
     projects: {
       // Add project sub-components here...
