@@ -15,6 +15,7 @@ import Explore from "../sub_links/metrics/Explore";
 import RunningPods from "../sub_links/metrics/RunningPods";
 import RunningServices from "../sub_links/metrics/RunningServices";
 import RunningPrometheusIPs from "../sub_links/metrics/RunningPrometheusIPs";
+import Configuratons from "../sub_links/metrics/Configuratons";
 
 // Add more imports as needed...
 
@@ -33,6 +34,7 @@ const ContentRenderer = () => {
       [`level-usages`]: <LevelUsages />,
       [`graph-centrality`]: <GraphCentrality />,
       indexes: <Indexes />,
+      configurations: <Configuratons />,
       explore: <Explore />,
       [`running-pods`]: <RunningPods />,
       services: <RunningServices />,
