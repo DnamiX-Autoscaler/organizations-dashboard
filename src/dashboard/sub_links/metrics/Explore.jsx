@@ -128,7 +128,7 @@ const Explore = () => {
               {query.isExecuted && (
                 <Icon
                   icon="mdi:check-circle"
-                  className="w-4 h-4 text-green-500"
+                  className="w-4 h-4 text-primary"
                 />
               )}
               {queries.length > 1 && (
