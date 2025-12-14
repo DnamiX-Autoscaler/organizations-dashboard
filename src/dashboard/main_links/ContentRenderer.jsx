@@ -11,6 +11,7 @@ import MetricsProcesses from "../sub_links/metrics/Processes";
 import LevelUsages from "../sub_links/metrics/LevelUsages";
 import GraphCentrality from "../sub_links/metrics/GraphCentrality";
 import Indexes from "../sub_links/metrics/Indexes";
+import Explore from "../sub_links/metrics/Explore";
 
 // Add more imports as needed...
 
@@ -29,6 +30,7 @@ const ContentRenderer = () => {
       [`level-usages`]: <LevelUsages />,
       [`graph-centrality`]: <GraphCentrality />,
       indexes: <Indexes />,
+      explore: <Explore />,
     },
     projects: {
       // Add project sub-components here...
