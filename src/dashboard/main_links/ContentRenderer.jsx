@@ -16,6 +16,7 @@ import RunningPods from "../sub_links/metrics/RunningPods";
 import RunningServices from "../sub_links/metrics/RunningServices";
 import RunningPrometheusIPs from "../sub_links/metrics/RunningPrometheusIPs";
 import Configuratons from "../sub_links/metrics/Configuratons";
+import MonitoringNotes from "../sub_links/metrics/MonitoringNotes";
 
 // Add more imports as needed...
 
@@ -38,7 +39,8 @@ const ContentRenderer = () => {
       explore: <Explore />,
       [`running-pods`]: <RunningPods />,
       services: <RunningServices />,
-      [`prometheus-ips`]: <RunningPrometheusIPs />
+      [`prometheus-ips`]: <RunningPrometheusIPs />,
+      [`monitoring-notes`]: <MonitoringNotes />
     },
     projects: {
       // Add project sub-components here...
