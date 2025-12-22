@@ -233,14 +233,15 @@ const Graph = ({
               <AreaChart data={data}>
                 <defs>
                   <linearGradient
-                    id={`color-${yKey}`}
+                    id={`color-${yKey}-${color}`}
                     x1="0"
                     y1="0"
                     x2="0"
                     y2="1"
                   >
-                    <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={color} stopOpacity={0} />
+                    <stop offset="0%" stopColor={color} stopOpacity={0.8} />
+                    <stop offset="50%" stopColor={color} stopOpacity={0.4} />
+                    <stop offset="100%" stopColor={color} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -289,7 +290,7 @@ const Graph = ({
                   stroke={color}
                   strokeWidth={2}
                   fillOpacity={1}
-                  fill={`url(#color-${yKey})`}
+                  fill={`url(#color-${yKey}-${color})`}
                   name={swapAxis ? xKey : yKey}
                 />
               </AreaChart>

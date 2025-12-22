@@ -7,11 +7,17 @@ import OverviewActivity from "../sub_links/overview/Activity";
 
 // Metrics sub-components
 import MetricsPerformance from "../sub_links/metrics/Performance";
-import MetricsUsage from "../sub_links/metrics/Usage";
-import MetricsTrends from "../sub_links/metrics/Trends";
-import MetricsForecasting from "../sub_links/metrics/Forecasting";
 import MetricsProcesses from "../sub_links/metrics/Processes";
 import LevelUsages from "../sub_links/metrics/LevelUsages";
+import GraphCentrality from "../sub_links/metrics/GraphCentrality";
+import Indexes from "../sub_links/metrics/Indexes";
+import Explore from "../sub_links/metrics/Explore";
+import RunningPods from "../sub_links/metrics/RunningPods";
+import RunningServices from "../sub_links/metrics/RunningServices";
+import RunningPrometheusIPs from "../sub_links/metrics/RunningPrometheusIPs";
+import Configuratons from "../sub_links/metrics/Configuratons";
+import MonitoringNotes from "../sub_links/metrics/MonitoringNotes";
+import MetricsExport from "../sub_links/metrics/MetricsExport";
 
 // Scaling sub-components
 import ScalingEvent from "../sub_links/scaling/ScalingEvent";
@@ -36,8 +42,15 @@ const ContentRenderer = () => {
       processes: <MetricsProcesses />,
       performance: <MetricsPerformance />,
       [`level-usages`]: <LevelUsages />,
-      trends: <MetricsTrends />,
-      forecasting: <MetricsForecasting />,
+      [`graph-centrality`]: <GraphCentrality />,
+      indexes: <Indexes />,
+      configurations: <Configuratons />,
+      explore: <Explore />,
+      [`running-pods`]: <RunningPods />,
+      services: <RunningServices />,
+      [`prometheus-ips`]: <RunningPrometheusIPs />,
+      [`monitoring-notes`]: <MonitoringNotes />,
+      [`data-exporter`]: <MetricsExport />
     },
     scaling: {
       event: <ScalingEvent />,
