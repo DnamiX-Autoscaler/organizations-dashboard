@@ -27,6 +27,7 @@ import ThresholdPolicyConfig from "../sub_links/scaling/ThresholdPolicyConfig";
 import RealTimeScaling from "../sub_links/scaling/RealTimeScaling";
 import Alerts from "../sub_links/scaling/Alerts";
 import Reports from "../sub_links/scaling/Reports";
+import CostResourceImpact from "../sub_links/scaling/CostResourceImpact";
 
 // Add more imports as needed...
 
@@ -61,6 +62,7 @@ const ContentRenderer = () => {
       config: <ThresholdPolicyConfig />,
       alerts: <Alerts />,
       reports: <Reports />,
+      cost: <CostResourceImpact />,
       // Add more scaling sub-components here...
     },
     projects: {

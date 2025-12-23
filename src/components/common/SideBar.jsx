@@ -42,6 +42,7 @@ const SUB_MENUS = {
     { id: "alerts", label: "Alerts", hasNotification: true },
     { id: "config", label: "Threshold Policy Config", hasNotification: false },
     { id: "reports", label: "Reports and Exports", hasNotification: false },
+    { id: "cost", label: "Cost & Resource Impact", hasNotification: false },
   ],
   reciliance: [
     { id: "uptime", label: "Uptime", hasNotification: false },
