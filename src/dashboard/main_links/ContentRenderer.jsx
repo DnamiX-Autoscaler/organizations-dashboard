@@ -28,6 +28,7 @@ import RealTimeScaling from "../sub_links/scaling/RealTimeScaling";
 import Alerts from "../sub_links/scaling/Alerts";
 import Reports from "../sub_links/scaling/Reports";
 import CostResourceImpact from "../sub_links/scaling/CostResourceImpact";
+import DeploymentHealth from "../sub_links/scaling/DeploymentHealth";
 
 // Add more imports as needed...
 
@@ -63,6 +64,7 @@ const ContentRenderer = () => {
       alerts: <Alerts />,
       reports: <Reports />,
       cost: <CostResourceImpact />,
+      health: <DeploymentHealth />,
       // Add more scaling sub-components here...
     },
     projects: {

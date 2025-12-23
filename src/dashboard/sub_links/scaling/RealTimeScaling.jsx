@@ -132,12 +132,12 @@ const RealTimeScaling = () => {
                     <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-full -mr-10 -mt-10"></div>
                     <div className="flex items-center justify-between mb-3 relative z-10">
                         <div className="p-2.5 bg-primary/20 dark:bg-primary/30 rounded-lg">
-                            <Icon icon="mdi:server-network" className="w-6 h-6 text-primary" />
+                            <Icon icon="mdi:clock-outline" className="w-6 h-6 text-primary" />
                         </div>
-                        <Icon icon="mdi:chevron-right" className="w-5 h-5 text-primary/50" />
+                        <div className="text-xs font-bold text-primary px-2 py-0.5 bg-primary/10 rounded">ACTIVE</div>
                     </div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Active Deployments</p>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{totalDeployments}</p>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Scaling Cooldown</p>
+                    <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">240s</p>
                 </div>
 
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/10 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-5 hover:shadow-lg relative overflow-hidden">
