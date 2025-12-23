@@ -54,60 +54,9 @@ const RealTimeScaling = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // Auto-update graph data every 3 seconds to show movement
-    useEffect(() => {
-        const graphTimer = setInterval(() => {
-            // Update CPU data with random fluctuations
-            setCpuData(prevData => {
-                const newData = [...prevData];
-                newData.shift(); // Remove first item
-                const lastValue = newData[newData.length - 1].value;
-                const newValue = Math.max(40, Math.min(85, lastValue + (Math.random() - 0.5) * 10));
-                newData.push({ time: "now", value: Math.round(newValue) });
-                return newData;
-            });
 
-            // Update Replica data with occasional changes
-            setReplicaData(prevData => {
-                const newData = [...prevData];
-                newData.shift(); // Remove first item
-                const lastValue = newData[newData.length - 1].count;
-                const change = Math.random() > 0.7 ? (Math.random() > 0.5 ? 1 : -1) : 0;
-                const newValue = Math.max(20, Math.min(32, lastValue + change));
-                newData.push({ time: "now", count: newValue });
-                return newData;
-            });
-        }, 3000); // Update every 3 seconds
 
-        return () => clearInterval(graphTimer);
-    }, []);
 
-    // Auto-update deployment usage percentages every 4 seconds
-    useEffect(() => {
-        const usageTimer = setInterval(() => {
-            setLiveUsage(prevUsage => {
-                const newUsage = { ...prevUsage };
-                Object.keys(newUsage).forEach(deploymentName => {
-                    // Small random fluctuations for CPU (±2-5%) with decimal precision
-                    const cpuChange = (Math.random() - 0.5) * 5;
-                    const newCpu = newUsage[deploymentName].cpu + cpuChange;
-                    newUsage[deploymentName].cpu = Math.max(30, Math.min(90,
-                        parseFloat(newCpu.toFixed(1))
-                    ));
-
-                    // Small random fluctuations for Memory (±1-3%) with decimal precision
-                    const memChange = (Math.random() - 0.5) * 3;
-                    const newMem = newUsage[deploymentName].memory + memChange;
-                    newUsage[deploymentName].memory = Math.max(40, Math.min(85,
-                        parseFloat(newMem.toFixed(1))
-                    ));
-                });
-                return newUsage;
-            });
-        }, 4000); // Update every 4 seconds
-
-        return () => clearInterval(usageTimer);
-    }, []);
 
     // Format timestamp
     const formatTime = (timestamp) => {
@@ -171,10 +120,7 @@ const RealTimeScaling = () => {
                         </div>
                     </div>
                     <div className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/20 rounded-full border border-green-200 dark:border-green-800">
-                        <span className="relative flex h-2.5 w-2.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-600"></span>
-                        </span>
+                        <span className="inline-flex rounded-full h-2.5 w-2.5 bg-green-600"></span>
                         <span className="text-sm font-semibold text-green-800 dark:text-green-200">LIVE</span>
                     </div>
                 </div>
@@ -239,10 +185,7 @@ const RealTimeScaling = () => {
                         <Icon icon="mdi:cpu-64-bit" className="w-5 h-5 text-primary" />
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">CPU Usage Trend</h3>
                         <div className="ml-auto flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded-full">
-                            <span className="relative flex h-1.5 w-1.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary"></span>
-                            </span>
+                            <span className="inline-flex rounded-full h-1.5 w-1.5 bg-primary"></span>
                             <span className="text-xs font-semibold text-primary">Live</span>
                         </div>
                     </div>
@@ -277,10 +220,7 @@ const RealTimeScaling = () => {
                         <Icon icon="mdi:cube-outline" className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Replica Count Trend</h3>
                         <div className="ml-auto flex items-center gap-1.5 px-2 py-1 bg-blue-100 dark:bg-blue-900/20 rounded-full">
-                            <span className="relative flex h-1.5 w-1.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-600"></span>
-                            </span>
+                            <span className="inline-flex rounded-full h-1.5 w-1.5 bg-blue-600"></span>
                             <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">Live</span>
                         </div>
                     </div>
@@ -422,10 +362,7 @@ const RealTimeScaling = () => {
                             </h3>
                         </div>
                         <div className="flex items-center gap-2 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/10 rounded-full border border-blue-200 dark:border-blue-800">
-                            <div className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
-                            </div>
+                            <div className="inline-flex rounded-full h-2 w-2 bg-blue-600"></div>
                             <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">LIVE</span>
                         </div>
                     </div>
@@ -444,10 +381,7 @@ const RealTimeScaling = () => {
                                     >
                                         <div className="flex items-center gap-2 mb-2">
                                             {isVeryRecent && (
-                                                <span className="relative flex h-1.5 w-1.5">
-                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
-                                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-600"></span>
-                                                </span>
+                                                <span className="inline-flex rounded-full h-1.5 w-1.5 bg-blue-600"></span>
                                             )}
                                             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                                 {formatTime(activity.timestamp)}
