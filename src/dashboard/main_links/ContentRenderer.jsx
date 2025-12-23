@@ -26,6 +26,7 @@ import ResilienceMetrics from "../sub_links/scaling/ResilienceMetrics";
 import ThresholdPolicyConfig from "../sub_links/scaling/ThresholdPolicyConfig";
 import RealTimeScaling from "../sub_links/scaling/RealTimeScaling";
 import Alerts from "../sub_links/scaling/Alerts";
+import Reports from "../sub_links/scaling/Reports";
 
 // Add more imports as needed...
 
@@ -59,6 +60,7 @@ const ContentRenderer = () => {
       "real-time-scaling": <RealTimeScaling />,
       config: <ThresholdPolicyConfig />,
       alerts: <Alerts />,
+      reports: <Reports />,
       // Add more scaling sub-components here...
     },
     projects: {
