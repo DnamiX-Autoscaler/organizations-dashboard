@@ -5,39 +5,69 @@ import TabSection from "../../../components/common/TabSection";
 import FilterDropdown from "../../../components/common/FilterDropdown";
 import ClearFilterButton from "../../../components/common/ClearFilterButton";
 import Graph from "../../../components/common/Graph";
+import ProjectMetricsAccordion from "./ProjectMetricsAccordion";
+import ResilienceMetricCard from "../../../components/common/ResilienceMetricCard";
 
 const ResilienceMetrics = () => {
-  const [activeTab, setActiveTab] = useState("metrics");
+  const [activeTab, setActiveTab] = useState("hierarchical");
+  const [selectedProject, setSelectedProject] = useState("");
   const [selectedDeployment, setSelectedDeployment] = useState("");
   const [selectedDecision, setSelectedDecision] = useState("");
 
   const filteredData = rollbackHistoryData.filter((item) => {
+    if (selectedProject && item.project !== selectedProject) return false;
     if (selectedDeployment && item.deployment !== selectedDeployment) return false;
     if (selectedDecision && item.decision !== selectedDecision) return false;
     return true;
   });
 
-  const uniqueDeployments = useMemo(
-    () => [...new Set(rollbackHistoryData.map((item) => item.deployment))],
+  const uniqueProjects = useMemo(
+    () => [...new Set(rollbackHistoryData.map((item) => item.project).filter(Boolean))],
     []
+  );
+  const uniqueDeployments = useMemo(
+    () => [...new Set(rollbackHistoryData.filter(i => !selectedProject || i.project === selectedProject).map((item) => item.deployment))],
+    [selectedProject]
   );
   const uniqueDecisions = useMemo(
     () => [...new Set(rollbackHistoryData.map((item) => item.decision))],
     []
   );
 
+  const projectOptions = uniqueProjects.map((project) => ({ value: project, label: project }));
   const deploymentOptions = uniqueDeployments.map((deployment) => ({ value: deployment, label: deployment }));
   const decisionOptions = uniqueDecisions.map((decision) => ({ value: decision, label: decision }));
 
   const handleClearFilter = () => {
+    setSelectedProject("");
     setSelectedDeployment("");
     setSelectedDecision("");
   };
 
   const tabs = [
-    { key: "metrics", label: "Metrics", icon: "mdi:view-dashboard-outline" },
-    { key: "charts", label: "Charts", icon: "mdi:chart-line" },
+    { key: "hierarchical", label: "Hierarchical View", icon: "mdi:file-tree" },
+    { key: "metrics", label: "Averages", icon: "mdi:view-dashboard-outline" },
+    { key: "charts", label: "Trends", icon: "mdi:chart-line" },
   ];
+
+  const hierarchicalData = useMemo(() => {
+    const grouped = {};
+
+    rollbackHistoryData.forEach(item => {
+      const proj = item.project || "Unassigned";
+      const serv = item.deployment;
+
+      if (!grouped[proj]) grouped[proj] = {};
+
+      // For simplicity, using the latest metrics for each service in the hierarchical view
+      // In a real app, this might be a rolling average or real-time snapshot
+      if (!grouped[proj][serv]) {
+        grouped[proj][serv] = item.metrics;
+      }
+    });
+
+    return grouped;
+  }, []);
 
   const metricAverages = useMemo(() => {
     if (filteredData.length === 0) {
@@ -67,32 +97,6 @@ const ResilienceMetrics = () => {
     };
   }, [filteredData]);
 
-  const clampPercent = (value) => Math.max(0, Math.min(Math.round(value), 100));
-
-  const renderMetricCard = (title, value, suffix, colorClass, hint) => (
-    <div className="p-4 border rounded-lg bg-white dark:bg-darkBackground border-gray-200 dark:border-gray-700">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{title}</p>
-          <p className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">
-            {Number.isFinite(value) ? value.toFixed(suffix === "%" ? 0 : 1) : "-"}
-            {suffix}
-          </p>
-          {hint && <p className="text-xs text-gray-500 dark:text-gray-400">{hint}</p>}
-        </div>
-        <div className={`${colorClass} bg-opacity-10 text-opacity-80 w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold`}>
-          •
-        </div>
-      </div>
-      <div className="mt-3 h-2 rounded-full bg-gray-100 dark:bg-darkBackgroundVery">
-        <div
-          className={`h-full rounded-full ${colorClass}`}
-          style={{ width: `${suffix === "%" ? clampPercent(value) : clampPercent((value / 1200) * 100)}%` }}
-        />
-      </div>
-    </div>
-  );
-
   const chartData = filteredData.map((item) => ({
     time: new Date(item.timestamp).toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -108,10 +112,12 @@ const ResilienceMetrics = () => {
     trafficRecovery: item.metrics?.trafficRecovery,
     deployment: item.deployment,
     decision: item.decision,
+    project: item.project,
   }));
 
   const tooltipFieldsBase = [
-    { key: "deployment", label: "Deployment" },
+    { key: "project", label: "Project" },
+    { key: "deployment", label: "Service" },
     { key: "decision", label: "Decision" },
   ];
 
@@ -119,17 +125,26 @@ const ResilienceMetrics = () => {
     <div className="flex flex-col h-full">
       <TitleHeader
         title="Resilience Metrics"
-        subtitle="Roll-up metrics from rollback / failed scale events"
+        subtitle="Hierarchical monitoring across projects and services"
       />
 
       <TabSection tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <FilterDropdown
+          value={selectedProject}
+          onChange={(val) => {
+            setSelectedProject(val);
+            setSelectedDeployment(""); // Reset service filter when project changes
+          }}
+          options={projectOptions}
+          placeholder="Select Project"
+        />
+        <FilterDropdown
           value={selectedDeployment}
           onChange={setSelectedDeployment}
           options={deploymentOptions}
-          placeholder="Select Deployment"
+          placeholder="Select Service"
         />
         <FilterDropdown
           value={selectedDecision}
@@ -137,25 +152,89 @@ const ResilienceMetrics = () => {
           options={decisionOptions}
           placeholder="Select Decision"
         />
-        {(selectedDeployment || selectedDecision) && (
+        {(selectedProject || selectedDeployment || selectedDecision) && (
           <ClearFilterButton onClick={handleClearFilter} />
         )}
         <div className="ml-auto text-sm text-gray-600 dark:text-gray-400">
-          Showing <span className="font-semibold">{filteredData.length}</span> of{" "}
-          <span className="font-semibold">{rollbackHistoryData.length}</span> events
+          Showing <span className="font-semibold">{filteredData.length}</span> results
         </div>
       </div>
 
+      {activeTab === "hierarchical" && (
+        <div className="space-y-4">
+          {Object.entries(hierarchicalData)
+            .filter(([proj]) => !selectedProject || proj === selectedProject)
+            .map(([projectName, servicesData]) => (
+              <ProjectMetricsAccordion
+                key={projectName}
+                projectName={projectName}
+                servicesData={servicesData}
+              />
+            ))}
+        </div>
+      )}
+
       {activeTab === "metrics" && (
         <div className="grid gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-4">
-          {renderMetricCard("Success rate", metricAverages.successRate, "%", "bg-green-500", "Higher is better")}
-          {renderMetricCard("Error rate", metricAverages.errorRate, "%", "bg-red-500", "Lower is better")}
-          {renderMetricCard("p95 latency (before)", metricAverages.p95LatencyBefore, " ms", "bg-amber-500", "Pre-change latency")}
-          {renderMetricCard("p95 latency (after)", metricAverages.p95LatencyAfter, " ms", "bg-blue-500", "Post-change latency")}
-          {renderMetricCard("CPU utilization", metricAverages.cpuPercent, "%", "bg-purple-500", "Average during event")}
-          {renderMetricCard("Memory utilization", metricAverages.memPercent, "%", "bg-indigo-500", "Average during event")}
-          {renderMetricCard("Restart count", metricAverages.restartCount, "", "bg-slate-500", "Avg pod restarts")}
-          {renderMetricCard("Traffic recovery", metricAverages.trafficRecovery, "%", "bg-emerald-500", "Post-rollback recovery")}
+          <ResilienceMetricCard
+            title="Avg Success Rate"
+            value={metricAverages.successRate}
+            suffix="%"
+            colorClass="bg-green-500"
+            hint="System-wide average"
+          />
+          <ResilienceMetricCard
+            title="Avg Error Rate"
+            value={metricAverages.errorRate}
+            suffix="%"
+            colorClass="bg-red-500"
+            hint="System-wide average"
+          />
+          <ResilienceMetricCard
+            title="Avg p95 (Pre)"
+            value={metricAverages.p95LatencyBefore}
+            suffix=" ms"
+            colorClass="bg-amber-500"
+            hint="System-wide average"
+            maxValue={2000}
+          />
+          <ResilienceMetricCard
+            title="Avg p95 (After)"
+            value={metricAverages.p95LatencyAfter}
+            suffix=" ms"
+            colorClass="bg-blue-500"
+            hint="System-wide average"
+            maxValue={2000}
+          />
+          <ResilienceMetricCard
+            title="Avg CPU"
+            value={metricAverages.cpuPercent}
+            suffix="%"
+            colorClass="bg-purple-500"
+            hint="System-wide average"
+          />
+          <ResilienceMetricCard
+            title="Avg Memory"
+            value={metricAverages.memPercent}
+            suffix="%"
+            colorClass="bg-indigo-500"
+            hint="System-wide average"
+          />
+          <ResilienceMetricCard
+            title="Avg Restarts"
+            value={metricAverages.restartCount}
+            suffix=""
+            colorClass="bg-slate-500"
+            hint="System-wide average"
+            maxValue={10}
+          />
+          <ResilienceMetricCard
+            title="Avg Traffic Recov."
+            value={metricAverages.trafficRecovery}
+            suffix="%"
+            colorClass="bg-emerald-500"
+            hint="System-wide average"
+          />
         </div>
       )}
 
@@ -173,8 +252,6 @@ const ResilienceMetrics = () => {
             tooltipFields={[...tooltipFieldsBase, { key: "successRate", label: "Success rate", suffix: "%" }]}
             enableAxisSwap={true}
             enableTypeToggle={true}
-            enableTimeRange={false}
-            enableLiveToggle={false}
           />
           <Graph
             data={chartData}
@@ -188,8 +265,6 @@ const ResilienceMetrics = () => {
             tooltipFields={[...tooltipFieldsBase, { key: "errorRate", label: "Error rate", suffix: "%" }]}
             enableAxisSwap={true}
             enableTypeToggle={true}
-            enableTimeRange={false}
-            enableLiveToggle={false}
           />
         </div>
       )}
@@ -198,3 +273,4 @@ const ResilienceMetrics = () => {
 };
 
 export default ResilienceMetrics;
+

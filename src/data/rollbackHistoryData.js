@@ -1,6 +1,7 @@
 const rollbackHistoryData = [
   {
     timestamp: "2025-12-07T10:05:12.000Z",
+    project: "Online-booking",
     deployment: "product-service",
     previousReplicas: 6,
     appliedReplicas: 4,
@@ -19,6 +20,7 @@ const rollbackHistoryData = [
   },
   {
     timestamp: "2025-12-07T10:12:34.000Z",
+    project: "Hotel-management",
     deployment: "order-service",
     previousReplicas: 5,
     appliedReplicas: 3,
@@ -37,6 +39,7 @@ const rollbackHistoryData = [
   },
   {
     timestamp: "2025-12-07T10:18:48.000Z",
+    project: "Online-booking",
     deployment: "product-service",
     previousReplicas: 4,
     appliedReplicas: 2,
@@ -55,6 +58,7 @@ const rollbackHistoryData = [
   },
   {
     timestamp: "2025-12-07T10:25:21.000Z",
+    project: "Hotel-management",
     deployment: "order-service",
     previousReplicas: 8,
     appliedReplicas: 6,
@@ -73,7 +77,8 @@ const rollbackHistoryData = [
   },
   {
     timestamp: "2025-12-07T10:31:59.000Z",
-    deployment: "product-service",
+    project: "Hospital-management",
+    deployment: "user-service",
     previousReplicas: 7,
     appliedReplicas: 5,
     decision: "FAILED",
@@ -91,6 +96,7 @@ const rollbackHistoryData = [
   },
   {
     timestamp: "2025-12-07T10:39:42.000Z",
+    project: "Hotel-management",
     deployment: "order-service",
     previousReplicas: 6,
     appliedReplicas: 4,
@@ -109,6 +115,7 @@ const rollbackHistoryData = [
   },
   {
     timestamp: "2025-12-07T10:46:03.000Z",
+    project: "Online-booking",
     deployment: "product-service",
     previousReplicas: 5,
     appliedReplicas: 3,
@@ -127,6 +134,7 @@ const rollbackHistoryData = [
   },
   {
     timestamp: "2025-12-07T10:52:18.000Z",
+    project: "Hotel-management",
     deployment: "order-service",
     previousReplicas: 9,
     appliedReplicas: 7,
@@ -145,6 +153,7 @@ const rollbackHistoryData = [
   },
   {
     timestamp: "2025-12-07T10:59:27.000Z",
+    project: "Online-booking",
     deployment: "product-service",
     previousReplicas: 6,
     appliedReplicas: 4,
@@ -163,6 +172,7 @@ const rollbackHistoryData = [
   },
   {
     timestamp: "2025-12-07T11:06:14.000Z",
+    project: "Hotel-management",
     deployment: "order-service",
     previousReplicas: 7,
     appliedReplicas: 5,
@@ -181,7 +191,8 @@ const rollbackHistoryData = [
   },
   {
     timestamp: "2025-12-07T11:13:58.000Z",
-    deployment: "product-service",
+    project: "Hospital-management",
+    deployment: "user-service",
     previousReplicas: 5,
     appliedReplicas: 3,
     decision: "FAILED",
@@ -199,6 +210,7 @@ const rollbackHistoryData = [
   },
   {
     timestamp: "2025-12-07T11:20:46.000Z",
+    project: "Hotel-management",
     deployment: "order-service",
     previousReplicas: 8,
     appliedReplicas: 6,
