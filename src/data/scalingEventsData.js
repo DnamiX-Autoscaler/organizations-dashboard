@@ -1,6 +1,7 @@
 const scalingEventsData = [
     {
         timestamp: "2025-12-07T10:15:32.000000+00:00",
+        project: "Online-booking",
         deployment: "product-service",
         requestedPods: 3,
         appliedReplicas: 5,
@@ -9,6 +10,7 @@ const scalingEventsData = [
     },
     {
         timestamp: "2025-12-07T10:18:45.000000+00:00",
+        project: "Hotel-management",
         deployment: "order-service",
         requestedPods: 2,
         appliedReplicas: 4,
@@ -17,6 +19,7 @@ const scalingEventsData = [
     },
     {
         timestamp: "2025-12-07T10:22:10.000000+00:00",
+        project: "Online-booking",
         deployment: "product-service",
         requestedPods: 5,
         appliedReplicas: 5,
@@ -25,6 +28,7 @@ const scalingEventsData = [
     },
     {
         timestamp: "2025-12-07T10:25:58.000000+00:00",
+        project: "Hotel-management",
         deployment: "order-service",
         requestedPods: 4,
         appliedReplicas: 2,
@@ -33,6 +37,7 @@ const scalingEventsData = [
     },
     {
         timestamp: "2025-12-07T10:30:22.000000+00:00",
+        project: "Online-booking",
         deployment: "product-service",
         requestedPods: 5,
         appliedReplicas: 8,
@@ -41,6 +46,7 @@ const scalingEventsData = [
     },
     {
         timestamp: "2025-12-07T10:35:15.000000+00:00",
+        project: "Hotel-management",
         deployment: "order-service",
         requestedPods: 4,
         appliedReplicas: 6,
@@ -49,6 +55,7 @@ const scalingEventsData = [
     },
     {
         timestamp: "2025-12-07T10:40:03.000000+00:00",
+        project: "Online-booking",
         deployment: "product-service",
         requestedPods: 8,
         appliedReplicas: 6,
@@ -57,6 +64,7 @@ const scalingEventsData = [
     },
     {
         timestamp: "2025-12-07T10:45:28.000000+00:00",
+        project: "Hotel-management",
         deployment: "order-service",
         requestedPods: 6,
         appliedReplicas: 6,
@@ -65,6 +73,7 @@ const scalingEventsData = [
     },
     {
         timestamp: "2025-12-07T10:50:41.000000+00:00",
+        project: "Online-booking",
         deployment: "product-service",
         requestedPods: 6,
         appliedReplicas: 4,
@@ -73,6 +82,7 @@ const scalingEventsData = [
     },
     {
         timestamp: "2025-12-07T10:55:19.000000+00:00",
+        project: "Hotel-management",
         deployment: "order-service",
         requestedPods: 6,
         appliedReplicas: 8,
@@ -81,6 +91,7 @@ const scalingEventsData = [
     },
     {
         timestamp: "2025-12-07T11:00:05.000000+00:00",
+        project: "Online-booking",
         deployment: "product-service",
         requestedPods: 4,
         appliedReplicas: 4,
@@ -89,6 +100,7 @@ const scalingEventsData = [
     },
     {
         timestamp: "2025-12-07T11:05:37.000000+00:00",
+        project: "Hotel-management",
         deployment: "order-service",
         requestedPods: 8,
         appliedReplicas: 10,
@@ -97,6 +109,7 @@ const scalingEventsData = [
     },
     {
         timestamp: "2025-12-07T11:10:52.000000+00:00",
+        project: "Online-booking",
         deployment: "product-service",
         requestedPods: 4,
         appliedReplicas: 3,
@@ -105,6 +118,7 @@ const scalingEventsData = [
     },
     {
         timestamp: "2025-12-07T11:15:20.000000+00:00",
+        project: "Hotel-management",
         deployment: "order-service",
         requestedPods: 10,
         appliedReplicas: 12,
@@ -113,7 +127,8 @@ const scalingEventsData = [
     },
     {
         timestamp: "2025-12-07T11:20:44.000000+00:00",
-        deployment: "product-service",
+        project: "Hospital-management",
+        deployment: "user-service",
         requestedPods: 3,
         appliedReplicas: 2,
         decision: "SUCCESS",
