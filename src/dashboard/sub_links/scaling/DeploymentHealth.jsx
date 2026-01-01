@@ -2,6 +2,7 @@ import React from "react";
 import { Icon } from "@iconify/react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import deploymentHealthData from "../../../data/deploymentHealthData";
+import ServiceMetricsGroup from "./ServiceMetricsGroup";
 
 const DeploymentHealth = () => {
     const {
@@ -11,7 +12,8 @@ const DeploymentHealth = () => {
         crashLoopBackOff,
         nodePressure,
         availability,
-        serviceAvailabilityBadges
+        serviceAvailabilityBadges,
+        projects
     } = deploymentHealthData;
 
     const getStatusColor = (status) => {
@@ -215,6 +217,30 @@ const DeploymentHealth = () => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                ))}
+            </div>
+            {/* Project Service Renewal Metrics */}
+            <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                    <Icon icon="mdi:server-network" className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Project Service Metrics</h3>
+                </div>
+
+                {projects && projects.map((project, pIndex) => (
+                    <div key={pIndex} className="bg-white dark:bg-darkBackground border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm">
+                        <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 dark:border-gray-800">
+                            <div className="w-1 h-5 bg-primary rounded-full"></div>
+                            <h4 className="font-bold text-lg text-gray-800 dark:text-gray-100">{project.name}</h4>
+                        </div>
+                        {project.services.map((service, sIndex) => (
+                            <div key={sIndex} className={sIndex !== project.services.length - 1 ? "mb-6 border-b border-dashed border-gray-200 dark:border-gray-700 pb-6" : ""}>
+                                <ServiceMetricsGroup
+                                    serviceName={service.serviceName}
+                                    metrics={service.metrics}
+                                />
+                            </div>
+                        ))}
                     </div>
                 ))}
             </div>
