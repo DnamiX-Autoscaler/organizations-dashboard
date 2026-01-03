@@ -297,23 +297,85 @@ export const stopMetricsCollection = async () => {
 };
 
 // Download dataset with actual data
-export const downloadDataset = async (format) => {
-    return new Promise((resolve) => {
+export const downloadDataset = async (format, context = {}) => {
+    const { projectName, serviceName, data } = context;
+
+    return new Promise(async (resolve) => {
+        if (format === "pdf") {
+            const { jsPDF } = await import("jspdf");
+            const { default: autoTable } = await import("jspdf-autotable");
+
+            const doc = jsPDF ? new jsPDF() : null;
+            if (!doc) {
+                resolve({ success: false });
+                return;
+            }
+
+            // Report Header
+            doc.setFontSize(22);
+            doc.setTextColor(44, 62, 80);
+            doc.text("Infrastructure Resilience Report", 14, 22);
+
+            doc.setFontSize(12);
+            doc.setTextColor(100);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+
+            doc.setDrawColor(44, 62, 80);
+            doc.line(14, 35, 196, 35);
+
+            // Scope Information
+            doc.setFontSize(14);
+            doc.setTextColor(44, 62, 80);
+            doc.text("Report Scope", 14, 45);
+
+            doc.setFontSize(11);
+            doc.setTextColor(0);
+            doc.text(`Project: ${projectName || "All Projects"}`, 14, 52);
+            doc.text(`Service: ${serviceName || "All Services"}`, 14, 58);
+
+            // Data Table
+            const tableData = (data || []).map(record => [
+                new Date(record.timestamp).toLocaleDateString(),
+                record.project || "N/A",
+                record.deployment || record.service_name || "N/A",
+                `${record.metrics?.successRate || record.success_rate_percent || 0}%`,
+                `${record.metrics?.errorRate || record.error_rate_percent || 0}%`,
+                `${record.metrics?.p95LatencyAfter || record.latency_p95_ms || 0}ms`,
+                `${record.metrics?.cpuPercent || record.node_cpu_usage_percent || 0}%`
+            ]);
+
+            autoTable(doc, {
+                startY: 65,
+                head: [["Date", "Project", "Service", "Success", "Error", "Latency", "CPU"]],
+                body: tableData,
+                theme: 'striped',
+                headStyles: { fillStyle: 'dark', fillColor: [44, 62, 80] },
+                alternateRowStyles: { fillColor: [245, 247, 250] }
+            });
+
+            // Summary Footer
+            const finalY = doc.lastAutoTable.finalY + 10;
+            doc.setFontSize(10);
+            doc.setTextColor(150);
+            doc.text("© 2026 DnamiX-Autoscaler Organizations Dashboard. Confidential Research Data.", 14, finalY);
+
+            doc.save(`Resilience_Report_${projectName || 'Global'}_${Date.now()}.pdf`);
+            resolve({ success: true });
+            return;
+        }
+
         setTimeout(() => {
             let content = "";
+            const exportData = data || fullMockMetricsData;
 
             if (format === "csv") {
-                // Generate CSV
-                const headers = Object.keys(fullMockMetricsData[0]).join(",");
-                const rows = fullMockMetricsData.map(record =>
-                    Object.values(record).join(",")
+                const headers = Object.keys(exportData[0]).join(",");
+                const rows = exportData.map(record =>
+                    Object.values(record).map(val => typeof val === 'object' ? JSON.stringify(val).replace(/,/g, ';') : val).join(",")
                 ).join("\n");
                 content = `${headers}\n${rows}`;
             } else {
-                // Generate JSON Lines
-                content = fullMockMetricsData.map(record =>
-                    JSON.stringify(record)
-                ).join("\n");
+                content = exportData.map(record => JSON.stringify(record)).join("\n");
             }
 
             const blob = new Blob([content], {
@@ -322,7 +384,7 @@ export const downloadDataset = async (format) => {
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `metrics_dataset_${Date.now()}.${format === "csv" ? "csv" : "jsonl"}`;
+            link.download = `metrics_export_${Date.now()}.${format === "csv" ? "csv" : "jsonl"}`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

@@ -19,6 +19,17 @@ import Configuratons from "../sub_links/metrics/Configuratons";
 import MonitoringNotes from "../sub_links/metrics/MonitoringNotes";
 import MetricsExport from "../sub_links/metrics/MetricsExport";
 
+// Scaling sub-components
+import ScalingEvent from "../sub_links/scaling/ScalingEvent";
+import RollbackHistory from "../sub_links/scaling/RollbackHistory";
+import ResilienceMetrics from "../sub_links/scaling/ResilienceMetrics";
+import ThresholdPolicyConfig from "../sub_links/scaling/ThresholdPolicyConfig";
+import RealTimeScaling from "../sub_links/scaling/RealTimeScaling";
+import Alerts from "../sub_links/scaling/Alerts";
+import Reports from "../sub_links/scaling/Reports";
+import CostResourceImpact from "../sub_links/scaling/CostResourceImpact";
+import DeploymentHealth from "../sub_links/scaling/DeploymentHealth";
+
 // Add more imports as needed...
 
 const ContentRenderer = () => {
@@ -43,6 +54,18 @@ const ContentRenderer = () => {
       [`prometheus-ips`]: <RunningPrometheusIPs />,
       [`monitoring-notes`]: <MonitoringNotes />,
       [`data-exporter`]: <MetricsExport />
+    },
+    scaling: {
+      event: <ScalingEvent />,
+      metrics: <ResilienceMetrics />,
+      rollback: <RollbackHistory />,
+      "real-time-scaling": <RealTimeScaling />,
+      config: <ThresholdPolicyConfig />,
+      alerts: <Alerts />,
+      reports: <Reports />,
+      cost: <CostResourceImpact />,
+      health: <DeploymentHealth />,
+      // Add more scaling sub-components here...
     },
     projects: {
       // Add project sub-components here...

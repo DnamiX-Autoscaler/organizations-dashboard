@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 
-const SideBarOne = ({ isCollapsed, onToggle, activeItem, onActiveChange }) => {
+const SideBarOne = ({ isCollapsed, onToggle, activeItem, onActiveChange, unreadScalingCount = 0 }) => {
   const menuContainerRef = useRef(null);
   const [hoveredItem, setHoveredItem] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
@@ -195,13 +195,18 @@ const SideBarOne = ({ isCollapsed, onToggle, activeItem, onActiveChange }) => {
                   onClick={() => onActiveChange(item.id)}
                   onMouseEnter={(e) => handleMouseEnter(item.id, e)}
                   onMouseLeave={handleMouseLeave}
-                  className={`p-3 rounded-lg transition-colors w-full flex items-center justify-center ${
+                  className={`p-3 rounded-lg transition-colors w-full flex items-center justify-center relative ${
                     activeItem === item.id
                       ? "text-primary dark:text-primary"
                       : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-black"
                   }`}
                 >
                   {item.icon}
+                  {item.id === "scaling" && unreadScalingCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] px-1.5 h-5 text-[11px] font-bold text-white bg-red-500 rounded-full flex items-center justify-center">
+                      {unreadScalingCount}
+                    </span>
+                  )}
                 </button>
               </div>
             ))}
