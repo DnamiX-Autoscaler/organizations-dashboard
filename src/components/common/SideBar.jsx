@@ -20,6 +20,7 @@ const SUB_MENUS = {
     { id: "level-usages", label: "Level Usages", hasNotification: false },
     { id: "graph-centrality", label: "Graph Centrality", hasNotification: false },
     { id: "indexes", label: "Indexes", hasNotification: false },
+    { id: "configurations", label: "Configurations", hasNotification: false },
     { id: "explore", label: "Explore", hasNotification: false },
     { id: "configurartions", label: "Configurartions", hasNotification: false },
     { id: "running-pods", label: "Running Pods", hasNotification: false },
