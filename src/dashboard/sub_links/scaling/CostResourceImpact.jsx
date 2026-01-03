@@ -4,6 +4,8 @@ import TitleHeader from "../../../components/common/TitleHeader";
 import TabSection from "../../../components/common/TabSection";
 import Graph from "../../../components/common/Graph";
 import rollbackHistoryData from "../../../data/rollbackHistoryData";
+import costData from "../../../data/costData";
+import ProjectCostAccordion from "./ProjectCostAccordion";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
 // Constants for Research Calculation (Resource Units)
@@ -17,6 +19,7 @@ const CostResourceImpact = () => {
 
     const tabs = [
         { key: "overview", label: "Consumption Overview", icon: "mdi:finance" },
+        { key: "projects", label: "Project Costs", icon: "mdi:office-building" },
         { key: "efficiency", label: "Resource Efficiency", icon: "mdi:gauge" },
         { key: "wasted", label: "Wasted Capacity", icon: "mdi:trash-can-outline" },
     ];
@@ -217,6 +220,163 @@ const CostResourceImpact = () => {
                         height={350}
                         showStats={true}
                     />
+                </div>
+            )}
+
+            {activeTab === "projects" && (
+                <div className="space-y-6">
+                    {/* Global Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="p-5 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl border border-purple-200 dark:border-purple-800 shadow-sm">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="p-2 bg-purple-500 rounded-lg bg-opacity-20">
+                                    <Icon icon="mdi:currency-usd-circle" className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                                </div>
+                                <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wide">
+                                    Total Monthly
+                                </span>
+                            </div>
+                            <p className="text-3xl font-black text-purple-700 dark:text-purple-300">
+                                ${costData.summary.totalMonthlyCost.toFixed(2)}
+                            </p>
+                            <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                                Across all projects
+                            </p>
+                        </div>
+
+                        <div className="p-5 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="p-2 bg-blue-500 rounded-lg bg-opacity-20">
+                                    <Icon icon="mdi:chart-box-outline" className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                                    Total RU
+                                </span>
+                            </div>
+                            <p className="text-3xl font-black text-blue-700 dark:text-blue-300">
+                                {costData.summary.totalResourceUnits.toLocaleString()}
+                            </p>
+                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                Resource units consumed
+                            </p>
+                        </div>
+
+                        <div className="p-5 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl border border-green-200 dark:border-green-800 shadow-sm">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="p-2 bg-green-500 rounded-lg bg-opacity-20">
+                                    <Icon icon="mdi:server-network" className="w-6 h-6 text-green-600 dark:text-green-400" />
+                                </div>
+                                <span className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wide">
+                                    Services
+                                </span>
+                            </div>
+                            <p className="text-3xl font-black text-green-700 dark:text-green-300">
+                                {costData.summary.totalServices}
+                            </p>
+                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                Across {costData.summary.totalProjects} projects
+                            </p>
+                        </div>
+
+                        <div className="p-5 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 rounded-xl border border-amber-200 dark:border-amber-800 shadow-sm">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="p-2 bg-amber-500 rounded-lg bg-opacity-20">
+                                    <Icon icon="mdi:chart-line" className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                                </div>
+                                <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
+                                    Avg Cost/Req
+                                </span>
+                            </div>
+                            <p className="text-3xl font-black text-amber-700 dark:text-amber-300">
+                                ${costData.summary.avgCostPerRequest.toFixed(3)}
+                            </p>
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                Per request average
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Cost Distribution Chart */}
+                    <div className="p-6 bg-white border border-gray-100 rounded-2xl dark:bg-darkBackground dark:border-gray-800">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-2">
+                                <Icon icon="mdi:chart-pie" className="w-6 h-6 text-primary" />
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    Cost Distribution by Project
+                                </h3>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="flex items-center justify-center">
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <PieChart>
+                                        <Pie
+                                            data={costData.projects.map(p => ({
+                                                name: p.name,
+                                                value: p.totalMonthlyCost
+                                            }))}
+                                            cx="50%"
+                                            cy="50%"
+                                            labelLine={false}
+                                            outerRadius={100}
+                                            fill="#8884d8"
+                                            dataKey="value"
+                                            label={({ name, percent }) => `${name.split(' ')[0]} ${(percent * 100).toFixed(0)}%`}
+                                        >
+                                            <Cell fill="#8b5cf6" />
+                                            <Cell fill="#3b82f6" />
+                                            <Cell fill="#10b981" />
+                                        </Pie>
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="space-y-3">
+                                {costData.projects.map((project, idx) => {
+                                    const colors = ['#8b5cf6', '#3b82f6', '#10b981'];
+                                    const percentage = (project.totalMonthlyCost / costData.summary.totalMonthlyCost * 100).toFixed(1);
+                                    return (
+                                        <div key={idx} className="p-4 bg-gray-50 dark:bg-darkBackgroundVery rounded-xl">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div
+                                                        className="w-3 h-3 rounded-full"
+                                                        style={{ backgroundColor: colors[idx] }}
+                                                    />
+                                                    <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                                        {project.name}
+                                                    </span>
+                                                </div>
+                                                <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                                                    {percentage}%
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-lg font-black text-gray-900 dark:text-white">
+                                                    ${project.totalMonthlyCost.toFixed(2)}
+                                                </span>
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                    {project.services.length} services
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Project Accordions */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <Icon icon="mdi:folder-open" className="w-6 h-6 text-primary" />
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                                Project Breakdown
+                            </h3>
+                        </div>
+                        {costData.projects.map((project, index) => (
+                            <ProjectCostAccordion key={index} project={project} />
+                        ))}
+                    </div>
                 </div>
             )}
 
