@@ -1,7 +1,8 @@
 const alertsData = [
   {
     id: "AL-2025-001",
-    service: "order-service",
+    project: "Online Bookstore",
+    service: "Order Service",
     severity: "critical",
     status: "open",
     rule: "CPU utilization > 85% for 5m",
@@ -14,10 +15,12 @@ const alertsData = [
     environment: "prod",
     node: "node-a3",
     action: "Scale up queued",
+    description: "High CPU usage detected on Order Service. Auto-scaling triggered to add 2 more replicas."
   },
   {
     id: "AL-2025-002",
-    service: "product-service",
+    project: "Online Bookstore",
+    service: "Product Service",
     severity: "high",
     status: "acknowledged",
     rule: "P95 latency > 750ms",
@@ -30,10 +33,12 @@ const alertsData = [
     environment: "prod",
     node: "node-b1",
     action: "Traffic shifted to canary",
+    description: "Response time degradation detected. Investigating database query performance."
   },
   {
     id: "AL-2025-003",
-    service: "payment-service",
+    project: "Hospital Management",
+    service: "Appointment Service",
     severity: "medium",
     status: "resolved",
     rule: "Error rate > 3%",
@@ -46,10 +51,12 @@ const alertsData = [
     environment: "prod",
     node: "node-c2",
     action: "Auto rollback applied",
+    description: "Error rate spike resolved after rolling back to previous stable version."
   },
   {
     id: "AL-2025-004",
-    service: "notification-service",
+    project: "Hotel Management",
+    service: "Reservation Service",
     severity: "high",
     status: "open",
     rule: "Queue depth > 1,000",
@@ -59,13 +66,15 @@ const alertsData = [
     triggeredAt: "2025-12-10T20:02:41.000Z",
     lastSeen: "2025-12-10T20:09:00.000Z",
     source: "Custom metric",
-    environment: "staging",
+    environment: "prod",
     node: "node-d4",
     action: "Scale out evaluating",
+    description: "Booking queue backlog detected during peak hours. Scaling workers to process pending reservations."
   },
   {
     id: "AL-2025-005",
-    service: "analytics-service",
+    project: "Hospital Management",
+    service: "Patient Service",
     severity: "medium",
     status: "acknowledged",
     rule: "Memory usage > 78%",
@@ -78,10 +87,12 @@ const alertsData = [
     environment: "prod",
     node: "node-e1",
     action: "Throttling background jobs",
+    description: "Memory pressure detected. Background data sync jobs temporarily paused."
   },
   {
     id: "AL-2025-006",
-    service: "inventory-service",
+    project: "Hotel Management",
+    service: "Butler Service",
     severity: "low",
     status: "resolved",
     rule: "Disk IO wait > 25%",
@@ -94,10 +105,12 @@ const alertsData = [
     environment: "prod",
     node: "node-f2",
     action: "No action needed",
+    description: "Temporary disk I/O spike resolved. System performance back to normal."
   },
   {
     id: "AL-2025-007",
-    service: "order-service",
+    project: "Online Bookstore",
+    service: "Order Service",
     severity: "critical",
     status: "acknowledged",
     rule: "Pod restart storm (>3/10m)",
@@ -110,10 +123,12 @@ const alertsData = [
     environment: "prod",
     node: "node-a2",
     action: "Node drain scheduled",
+    description: "Multiple pod restarts detected. Investigating OOM issues and node health."
   },
   {
     id: "AL-2025-008",
-    service: "product-service",
+    project: "Online Bookstore",
+    service: "Product Service",
     severity: "medium",
     status: "open",
     rule: "HPA cooldown breached",
@@ -126,10 +141,12 @@ const alertsData = [
     environment: "prod",
     node: "node-b3",
     action: "Manual review required",
+    description: "Rapid scaling events detected. HPA policy may need adjustment to prevent flapping."
   },
   {
     id: "AL-2025-009",
-    service: "payment-service",
+    project: "Hospital Management",
+    service: "Medical Records Service",
     severity: "high",
     status: "resolved",
     rule: "DB connections > 90%",
@@ -142,10 +159,12 @@ const alertsData = [
     environment: "prod",
     node: "node-c4",
     action: "Connection pool tuned",
+    description: "Database connection pool exhaustion resolved by increasing max connections."
   },
   {
     id: "AL-2025-010",
-    service: "notification-service",
+    project: "Hotel Management",
+    service: "Room Service",
     severity: "low",
     status: "open",
     rule: "Lagging consumer detected",
@@ -158,7 +177,45 @@ const alertsData = [
     environment: "staging",
     node: "node-d1",
     action: "Consumer restart pending",
+    description: "Message processing lag detected. Consumer group rebalancing in progress."
+  },
+  {
+    id: "AL-2025-011",
+    project: "Online Bookstore",
+    service: "User Service",
+    severity: "low",
+    status: "acknowledged",
+    rule: "Response time > 500ms",
+    metric: "Latency",
+    currentValue: 580,
+    threshold: "500ms",
+    triggeredAt: "2025-12-10T20:00:30.000Z",
+    lastSeen: "2025-12-10T20:08:15.000Z",
+    source: "APM",
+    environment: "prod",
+    node: "node-g1",
+    action: "Cache warming initiated",
+    description: "Slight latency increase after cache invalidation. Warming cache with frequently accessed data."
+  },
+  {
+    id: "AL-2025-012",
+    project: "Hospital Management",
+    service: "Appointment Service",
+    severity: "critical",
+    status: "open",
+    rule: "Service unavailable",
+    metric: "Availability",
+    currentValue: 87,
+    threshold: "99%",
+    triggeredAt: "2025-12-10T20:10:00.000Z",
+    lastSeen: "2025-12-10T20:12:45.000Z",
+    source: "Health check",
+    environment: "prod",
+    node: "node-h2",
+    action: "Emergency scaling",
+    description: "Service availability dropped below SLA. Immediate intervention required."
   },
 ];
 
 export default alertsData;
+

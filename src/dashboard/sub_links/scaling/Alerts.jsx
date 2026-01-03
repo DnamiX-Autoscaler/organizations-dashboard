@@ -109,6 +109,7 @@ const Alerts = () => {
 
   const columns = [
     { key: "triggeredAt", label: "Triggered", icon: "mdi:clock-outline" },
+    { key: "project", label: "Project", icon: "mdi:office-building", bold: true },
     { key: "service", label: "Service", icon: "mdi:server", bold: true },
     { key: "severity", label: "Severity", icon: "mdi:alert" },
     { key: "status", label: "Status", icon: "mdi:check-decagram" },
@@ -122,8 +123,20 @@ const Alerts = () => {
     const unit = extractUnit(item.threshold);
     const currentValue = `${item.currentValue}${unit ? ` ${unit}` : ""}`;
 
+    // Project color coding for table
+    const projectColors = {
+      "Hotel Management": "text-purple-700 dark:text-purple-300",
+      "Hospital Management": "text-blue-700 dark:text-blue-300",
+      "Online Bookstore": "text-green-700 dark:text-green-300"
+    };
+
     return {
       triggeredAt: formatTimestamp(item.lastSeen || item.triggeredAt),
+      project: (
+        <span className={`font-semibold ${projectColors[item.project] || "text-gray-900 dark:text-gray-100"}`}>
+          {item.project}
+        </span>
+      ),
       service: item.service,
       severity: (
         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${severityStyles[item.severity] || "bg-gray-100 text-gray-800"}`}>
@@ -232,57 +245,125 @@ const Alerts = () => {
               <Table columns={columns} data={[]} empty="No active alerts match the filters" />
             </div>
           )}
-          {viewData.map((item) => (
-            <div
-              key={item.id}
-              className="p-4 border rounded-xl bg-white dark:bg-darkBackground border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-gray-50 dark:bg-darkBackgroundVery">
-                  <Icon icon="mdi:alert-decagram" className="w-5 h-5 text-primary" />
+          {viewData.map((item) => {
+            // Project color coding
+            const projectColors = {
+              "Hotel Management": {
+                bg: "bg-purple-50 dark:bg-purple-900/20",
+                border: "border-purple-200 dark:border-purple-800",
+                text: "text-purple-700 dark:text-purple-300",
+                icon: "mdi:hotel"
+              },
+              "Hospital Management": {
+                bg: "bg-blue-50 dark:bg-blue-900/20",
+                border: "border-blue-200 dark:border-blue-800",
+                text: "text-blue-700 dark:text-blue-300",
+                icon: "mdi:hospital-building"
+              },
+              "Online Bookstore": {
+                bg: "bg-green-50 dark:bg-green-900/20",
+                border: "border-green-200 dark:border-green-800",
+                text: "text-green-700 dark:text-green-300",
+                icon: "mdi:book-open-page-variant"
+              }
+            };
+
+            const projectStyle = projectColors[item.project] || {
+              bg: "bg-gray-50 dark:bg-gray-900/20",
+              border: "border-gray-200 dark:border-gray-800",
+              text: "text-gray-700 dark:text-gray-300",
+              icon: "mdi:folder"
+            };
+
+            return (
+              <div
+                key={item.id}
+                className="p-5 border rounded-xl bg-white dark:bg-darkBackground border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg transition-all duration-300"
+              >
+                {/* Header with Alert Icon and Badges */}
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="p-2 rounded-lg bg-red-50 dark:bg-red-900/20">
+                    <Icon icon="mdi:alert-decagram" className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{item.rule}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`px-2 py-1 rounded-full text-[11px] font-semibold uppercase ${severityStyles[item.severity]}`}>
+                        {item.severity}
+                      </span>
+                      <span className={`px-2 py-1 rounded-full text-[11px] font-semibold capitalize ${statusStyles[item.status]}`}>
+                        {item.status}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.rule}</span>
-                    <span className={`px-2 py-1 rounded-full text-[11px] font-semibold uppercase ${severityStyles[item.severity]}`}>
-                      {item.severity}
-                    </span>
-                    <span className={`px-2 py-1 rounded-full text-[11px] font-semibold capitalize ${statusStyles[item.status]}`}>
-                      {item.status}
+
+                {/* Project and Service Info */}
+                <div className="mb-4 space-y-2">
+                  <div className={`flex items-center gap-2 p-2 rounded-lg ${projectStyle.bg} ${projectStyle.border} border`}>
+                    <Icon icon={projectStyle.icon} className={`w-4 h-4 ${projectStyle.text}`} />
+                    <div className="flex-1">
+                      <p className={`text-xs font-bold ${projectStyle.text}`}>{item.project}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-darkBackgroundVery">
+                    <Icon icon="mdi:server" className="w-4 h-4 text-primary" />
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">{item.service}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">{item.source} • {item.environment.toUpperCase()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Alert Description */}
+                {item.description && (
+                  <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+                      <Icon icon="mdi:information-outline" className="inline w-3.5 h-3.5 mr-1" />
+                      {item.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Metrics */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-darkBackgroundVery text-sm mb-3">
+                  <div className="flex items-center gap-2">
+                    <Icon icon="mdi:chart-areaspline" className="w-4 h-4 text-primary" />
+                    <div className="flex flex-col">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Current</span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">
+                        {item.currentValue}
+                        {extractUnit(item.threshold) ? ` ${extractUnit(item.threshold)}` : ""}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Icon icon="mdi:axis-arrow" className="w-4 h-4 text-gray-500" />
+                    <div className="flex flex-col text-right">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Threshold</span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">{item.threshold}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer with Time and Action */}
+                <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Icon icon="mdi:clock-outline" className="w-4 h-4 text-gray-400" />
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                      {formatRelative(item.lastSeen || item.triggeredAt)}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {item.service} • {item.source}
-                  </p>
+                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+                    <Icon icon="mdi:cog" className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-300">{item.action}</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-darkBackgroundVery text-sm">
-                <div className="flex items-center gap-2">
-                  <Icon icon="mdi:chart-areaspline" className="w-4 h-4 text-primary" />
-                  <div className="flex flex-col">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Current</span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">
-                      {item.currentValue}
-                      {extractUnit(item.threshold) ? ` ${extractUnit(item.threshold)}` : ""}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Icon icon="mdi:axis-arrow" className="w-4 h-4 text-gray-500" />
-                  <div className="flex flex-col text-right">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Threshold</span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">{item.threshold}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Icon icon="mdi:clock-outline" className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {formatRelative(item.lastSeen || item.triggeredAt)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
