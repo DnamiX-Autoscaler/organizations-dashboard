@@ -28,10 +28,10 @@ const FEATURE_KEYS = [
 const SIMULATION_INTERVAL_MS = 2000;
 
 const MLModelDashboard = () => {
-    const [podData, setPodData] = useState([]);
-    const [resourceData, setResourceData] = useState([]);
-    const [performanceData, setPerformanceData] = useState([]);
-    const [efficiencyData, setEfficiencyData] = useState([]);
+    const [podData, setPodData] = useState(getPodCountData());
+    const [resourceData, setResourceData] = useState(getResourceMetricsData());
+    const [performanceData, setPerformanceData] = useState(getPerformanceMetricsData());
+    const [efficiencyData, setEfficiencyData] = useState(getProvisioningEfficiencyData());
     const [simulationQueue, setSimulationQueue] = useState([]);
     const simIndexRef = useRef(48);
     const [isApiHealthy, setIsApiHealthy] = useState(false);
@@ -69,27 +69,6 @@ const MLModelDashboard = () => {
         });
     };
 
-    useEffect(() => {
-        setResourceData(getResourceMetricsData());
-        setPerformanceData(getPerformanceMetricsData());
-        setEfficiencyData(getProvisioningEfficiencyData());
-        setPodData(getPodCountData());
-
-        checkApiHealth().then(status => {
-            if (status) {
-                setIsApiHealthy(true);
-                fetchSimulationData().then(data => {
-                    if (data && data.length > 48) {
-                        setSimulationQueue(data);
-                        initializeChartsFromData(data.slice(0, 20));
-                        simIndexRef.current = 48;
-                        setIsSimulating(true);
-                    }
-                }).catch(err => console.error("Simulation fetch error:", err));
-            }
-        });
-    }, []);
-
     const initializeChartsFromData = (dataSlice) => {
         setPodData(dataSlice.map(row => ({
             time: formatTime(row.timestamp),
@@ -108,6 +87,22 @@ const MLModelDashboard = () => {
             requests: parseFloat(row.request_rate_rps || 0)
         })));
     };
+
+    useEffect(() => {
+        checkApiHealth().then(status => {
+            if (status) {
+                setIsApiHealthy(true);
+                fetchSimulationData().then(data => {
+                    if (data && data.length > 48) {
+                        setSimulationQueue(data);
+                        initializeChartsFromData(data.slice(0, 20));
+                        simIndexRef.current = 48;
+                        setIsSimulating(true);
+                    }
+                }).catch(err => console.error("Simulation fetch error:", err));
+            }
+        });
+    }, []);
 
     useEffect(() => {
         if (!isSimulating || !isApiHealthy || simulationQueue.length === 0) return;
