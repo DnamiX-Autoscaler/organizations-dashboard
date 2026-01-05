@@ -30,6 +30,10 @@ import Reports from "../sub_links/scaling/Reports";
 import CostResourceImpact from "../sub_links/scaling/CostResourceImpact";
 import DeploymentHealth from "../sub_links/scaling/DeploymentHealth";
 
+// ML Model sub-components
+import MLModelDashboard from "../sub_links/mlmodel/MLModelDashboard";
+import MLModelLogs from "../sub_links/mlmodel/MLModelLogs";
+
 // Add more imports as needed...
 
 const ContentRenderer = () => {
@@ -69,6 +73,13 @@ const ContentRenderer = () => {
     },
     projects: {
       // Add project sub-components here...
+    },
+    mlmodel: {
+      dashboard: <MLModelDashboard />,
+      models: <div className="p-4">Models View (Coming Soon)</div>,
+      training: <div className="p-4">Training View (Coming Soon)</div>,
+      deployments: <div className="p-4">Deployments View (Coming Soon)</div>,
+      logs: <MLModelLogs />,
     },
     // Add more main menu routes here...
   };
