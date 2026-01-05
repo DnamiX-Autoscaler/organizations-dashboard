@@ -29,9 +29,8 @@ const SUB_MENUS = {
     { id: "data-exporter", label: "Data Exporter", hasNotification: false },
   ],
   mlmodel: [
-    { id: "models", label: "Models", hasNotification: false },
-    { id: "training", label: "Training", hasNotification: false },
-    { id: "deployments", label: "Deployments", hasNotification: false },
+    { id: "dashboard", label: "Dashboard", hasNotification: false },
+    { id: "logs", label: "Logs", hasNotification: false },
   ],
   scaling: [
     { id: "event", label: "Scaling Event", hasNotification: false },
