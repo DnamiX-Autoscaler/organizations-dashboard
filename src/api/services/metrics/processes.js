@@ -1,5 +1,5 @@
-import api from "../config/api";
-import ENDPOINTS from "../config/endpoint";
+import api from "../../config/api";
+import ENDPOINTS from "../../config/endpoint";
 
 const processesService = {
     /**

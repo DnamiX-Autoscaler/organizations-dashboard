@@ -1,6 +1,6 @@
-// Use nullish coalescing so an intentionally empty METRICS_COLLECTOR_BASE_URLL (for Vite proxy) is respected.
-// Falls back to direct URL only when the variable is completely absent.
-const BASE_URL = import.meta.env.METRICS_COLLECTOR_BASE_URLL ?? "http://localhost:8000";
+// Empty string so all API calls use relative paths routed through the Vite dev-server proxy.
+// This avoids CORS entirely — the browser always talks to the same origin.
+const BASE_URL = "";
 
 const api = {
     baseUrl: BASE_URL,

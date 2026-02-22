@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
-import processesService from "../../../api/services/processes";
+import processesService from "../../../api/services/metrics/processes";
 import TitleHeader from "../../../components/common/TitleHeader";
 import TabSection from "../../../components/common/TabSection";
 import FilterDropdown from "../../../components/common/FilterDropdown";
