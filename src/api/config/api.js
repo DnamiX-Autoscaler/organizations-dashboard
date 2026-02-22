@@ -1,6 +1,6 @@
-// Use nullish coalescing so an intentionally empty VITE_BASE_URL (for Vite proxy) is respected.
+// Use nullish coalescing so an intentionally empty METRICS_COLLECTOR_BASE_URLL (for Vite proxy) is respected.
 // Falls back to direct URL only when the variable is completely absent.
-const BASE_URL = import.meta.env.VITE_BASE_URL ?? "http://localhost:8000";
+const BASE_URL = import.meta.env.METRICS_COLLECTOR_BASE_URLL ?? "http://localhost:8000";
 
 const api = {
     baseUrl: BASE_URL,
