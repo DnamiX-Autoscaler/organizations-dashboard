@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
-import { processData } from "../../../data";
+import processesService from "../../../api/services/processes";
 import TitleHeader from "../../../components/common/TitleHeader";
 import TabSection from "../../../components/common/TabSection";
 import FilterDropdown from "../../../components/common/FilterDropdown";
@@ -14,6 +14,91 @@ const MetricsProcesses = () => {
   const [selectedNamespace, setSelectedNamespace] = useState("");
   const [selectedService, setSelectedService] = useState("");
 
+  // Real-time SSE state
+  const [processData, setProcessData] = useState([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState(null);
+  const abortControllerRef = useRef(null);
+  const retryCountRef = useRef(0);
+  const MAX_RETRIES = 5;
+
+  // Connect to SSE on mount, disconnect on unmount
+  useEffect(() => {
+    let cancelled = false;
+
+    const connectSSE = async () => {
+      if (cancelled || retryCountRef.current >= MAX_RETRIES) return;
+      setError(null);
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      await processesService.connectLiveStream({
+        signal: controller.signal,
+
+        onOpen: () => {
+          if (!cancelled) {
+            setIsConnected(true);
+            setError(null);
+            retryCountRef.current = 0; // Reset retry count on successful connection
+          }
+        },
+
+        onMessage: (data) => {
+          if (cancelled) return;
+          setIsConnected(true);
+          setError(null);
+
+          // The SSE may send an array of processes or a single object
+          if (Array.isArray(data)) {
+            setProcessData(data);
+          } else {
+            setProcessData((prev) => {
+              const updated = [...prev, data];
+              return updated.length > 500 ? updated.slice(-500) : updated;
+            });
+          }
+        },
+
+        onError: (err) => {
+          if (cancelled) return;
+          console.error("SSE error:", err);
+          setIsConnected(false);
+          setError("Connection lost. Reconnecting...");
+
+          retryCountRef.current += 1;
+          if (retryCountRef.current < MAX_RETRIES) {
+            // Retry after 3 seconds
+            setTimeout(() => {
+              if (!cancelled) connectSSE();
+            }, 3000);
+          } else {
+            setError("Max retry attempts reached. Please refresh the page.");
+          }
+        },
+      });
+
+      // Stream ended naturally — reconnect to keep it live
+      if (!cancelled) {
+        setIsConnected(false);
+        setTimeout(() => {
+          if (!cancelled) connectSSE();
+        }, 1000);
+      }
+    };
+
+    connectSSE();
+
+    // Cleanup: abort the stream on unmount
+    return () => {
+      cancelled = true;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, []);
+
   // Filter logic
   const filteredData = processData.filter((item) => {
     if (selectedClusterId && item.clusterId !== selectedClusterId) return false;
@@ -22,7 +107,7 @@ const MetricsProcesses = () => {
     return true;
   });
 
-  // Get unique values for filters
+  // Get unique values for filters from live data
   const uniqueClusterIds = [
     ...new Set(processData.map((item) => item.clusterId)),
   ];
@@ -65,6 +150,23 @@ const MetricsProcesses = () => {
         title="Processes"
         subtitle="Check Clusters How to Processing"
       />
+
+      {/* SSE Connection Status */}
+      <div className="flex items-center gap-2 mb-3 text-sm">
+        <span
+          className={`inline-block w-2.5 h-2.5 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"
+            }`}
+        />
+        <span className={isConnected ? "text-green-400" : "text-red-400"}>
+          {isConnected ? "Live — Real-time streaming" : "Disconnected"}
+        </span>
+        {processData.length > 0 && (
+          <span className="ml-2 text-gray-500">
+            ({processData.length} records)
+          </span>
+        )}
+        {error && <span className="ml-2 text-yellow-400">{error}</span>}
+      </div>
 
       {/* Tabs Section */}
       <TabSection
