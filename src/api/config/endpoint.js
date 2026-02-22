@@ -5,6 +5,9 @@ const ENDPOINTS = {
     PERFORMANCE: {
         STREAM: "/performance/live-stream",
     },
+    NODE: {
+        STREAM: "/nodes/live-stream",
+    },
 };
 
 export default ENDPOINTS;
