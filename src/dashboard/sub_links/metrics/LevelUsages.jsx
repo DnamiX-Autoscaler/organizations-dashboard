@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { appLevel, serviceMeshLevel } from "../../../data";
+import { serviceMeshLevel } from "../../../data";
 import nodeLevelService from "../../../api/services/metrics/node_level";
 import podLevelService from "../../../api/services/metrics/pod_level";
+import appLevelService from "../../../api/services/metrics/app_level";
 import TitleHeader from "../../../components/common/TitleHeader";
 import TabSection from "../../../components/common/TabSection";
 import NodeLevel from "../../../components/metrics/level_usages/node_level/NodeLevel";
@@ -28,6 +29,13 @@ const LevelUsages = () => {
   const [podError, setPodError] = useState(null);
   const podAbortRef = useRef(null);
   const podRetryRef = useRef(0);
+
+  // ── App Level SSE State ──
+  const [appLevelData, setAppLevelData] = useState([]);
+  const [appConnected, setAppConnected] = useState(false);
+  const [appError, setAppError] = useState(null);
+  const appAbortRef = useRef(null);
+  const appRetryRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,6 +161,67 @@ const LevelUsages = () => {
     };
   }, []);
 
+  // ── App Level SSE ──
+  useEffect(() => {
+    let cancelled = false;
+
+    const connectSSE = async () => {
+      if (cancelled || appRetryRef.current >= MAX_RETRIES) return;
+      setAppError(null);
+
+      const controller = new AbortController();
+      appAbortRef.current = controller;
+
+      await appLevelService.connectLiveStream({
+        signal: controller.signal,
+
+        onOpen: () => {
+          if (!cancelled) {
+            setAppConnected(true);
+            setAppError(null);
+            appRetryRef.current = 0;
+          }
+        },
+
+        onMessage: (data) => {
+          if (cancelled) return;
+          setAppConnected(true);
+          setAppError(null);
+          if (Array.isArray(data)) {
+            setAppLevelData(data);
+          }
+        },
+
+        onError: () => {
+          if (cancelled) return;
+          setAppConnected(false);
+          appRetryRef.current += 1;
+          if (appRetryRef.current < MAX_RETRIES) {
+            setAppError("Connection lost. Reconnecting...");
+            setTimeout(() => { if (!cancelled) connectSSE(); }, 3000);
+          } else {
+            setAppError("Max retry attempts reached. Please refresh the page.");
+          }
+        },
+      });
+
+      if (!cancelled) {
+        setAppConnected(false);
+        setTimeout(() => { if (!cancelled) connectSSE(); }, 1000);
+      }
+    };
+
+    connectSSE();
+
+    return () => {
+      cancelled = true;
+      if (appAbortRef.current) {
+        appAbortRef.current.abort();
+        appAbortRef.current = null;
+      }
+    };
+  }, []);
+
   const tabs = [
     { key: "node", label: "Node Level", icon: "mdi:server" },
     { key: "pod", label: "Pod Level", icon: "mdi:cube-outline" },
@@ -195,8 +264,14 @@ const LevelUsages = () => {
           error={podError}
         />
       )}
-      {/* Application Level */}
-      {activeTab === "app" && <AppLevel data={appLevel} />}
+      {/* Application Level — live SSE data */}
+      {activeTab === "app" && (
+        <AppLevel
+          data={appLevelData}
+          isConnected={appConnected}
+          error={appError}
+        />
+      )}
       {/* Service Mesh Level */}
       {activeTab === "serviceMesh" && (
         <ServiceMeshLevel data={serviceMeshLevel} />
