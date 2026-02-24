@@ -2,35 +2,55 @@ import React from "react";
 import Graph from "../../../common/Graph";
 
 const NodeLevelGraph = ({ data }) => {
-  // Transform data for CPU usage graph
-  const cpuData = data.map((node, index) => ({
-    time: node.node_name,
-    value: node.node_cpu_usage_percent,
-    timeStamp: new Date().getTime() - (data.length - index) * 60000,
+  // Use namespace as X-axis label (each record = one namespace on the node)
+  // Timestamp and services are included in tooltips
+
+  const cpuData = data.map((item) => ({
+    time: item.timestamp
+      ? new Date(item.timestamp).toLocaleTimeString()
+      : item.namespace ?? item.node_name,
+    value: item.node_cpu_usage_percent,
+    node: item.node_name,
+    namespace: item.namespace,
+    timestamp: item.timestamp
+      ? new Date(item.timestamp).toLocaleTimeString()
+      : "-",
+    services: Array.isArray(item.services)
+      ? item.services.join(", ")
+      : item.services ?? "-",
   }));
 
-  // Transform data for Memory usage graph
-  const memoryData = data.map((node, index) => ({
-    time: node.node_name,
-    value: node.node_memory_usage_percent,
-    mb: node.node_memory_usage_mb,
-    timeStamp: new Date().getTime() - (data.length - index) * 60000,
+  const memoryData = data.map((item) => ({
+    time: item.namespace ?? item.node_name,
+    value: item.node_memory_usage_percent,
+    mb: item.node_memory_usage_mb,
+    node: item.node_name,
+    namespace: item.namespace,
+    timestamp: item.timestamp
+      ? new Date(item.timestamp).toLocaleTimeString()
+      : "-",
   }));
 
-  // Transform data for Network usage graph
-  const networkData = data.map((node, index) => ({
-    time: node.node_name,
-    rx: node.node_network_rx_kbps,
-    tx: node.node_network_tx_kbps,
-    timeStamp: new Date().getTime() - (data.length - index) * 60000,
+  const networkData = data.map((item) => ({
+    time: item.namespace ?? item.node_name,
+    rx: item.node_network_rx_kbps,
+    tx: item.node_network_tx_kbps,
+    node: item.node_name,
+    namespace: item.namespace,
+    timestamp: item.timestamp
+      ? new Date(item.timestamp).toLocaleTimeString()
+      : "-",
   }));
 
-  // Transform data for Disk IOPS graph
-  const diskData = data.map((node, index) => ({
-    time: node.node_name,
-    read: node.node_disk_read_iops,
-    write: node.node_disk_write_iops,
-    timeStamp: new Date().getTime() - (data.length - index) * 60000,
+  const diskData = data.map((item) => ({
+    time: item.namespace ?? item.node_name,
+    read: item.node_disk_read_iops,
+    write: item.node_disk_write_iops,
+    node: item.node_name,
+    namespace: item.namespace,
+    timestamp: item.timestamp
+      ? new Date(item.timestamp).toLocaleTimeString()
+      : "-",
   }));
 
   return (
@@ -49,7 +69,13 @@ const NodeLevelGraph = ({ data }) => {
         enableTypeToggle={true}
         enableTimeRange={false}
         enableLiveToggle={true}
-        tooltipFields={[{ key: "value", label: "CPU Usage", suffix: "%" }]}
+        tooltipFields={[
+          { key: "value", label: "CPU Usage", suffix: "%" },
+          { key: "node", label: "Node" },
+          { key: "namespace", label: "Namespace" },
+          { key: "timestamp", label: "Time" },
+          { key: "services", label: "Services" },
+        ]}
       />
 
       {/* Memory Usage Graph */}
@@ -69,6 +95,9 @@ const NodeLevelGraph = ({ data }) => {
         tooltipFields={[
           { key: "value", label: "Memory Usage", suffix: "%" },
           { key: "mb", label: "Memory", suffix: " MB" },
+          { key: "node", label: "Node" },
+          { key: "namespace", label: "Namespace" },
+          { key: "timestamp", label: "Time" },
         ]}
       />
 
@@ -89,6 +118,9 @@ const NodeLevelGraph = ({ data }) => {
         tooltipFields={[
           { key: "rx", label: "RX", suffix: " Kbps" },
           { key: "tx", label: "TX", suffix: " Kbps" },
+          { key: "node", label: "Node" },
+          { key: "namespace", label: "Namespace" },
+          { key: "timestamp", label: "Time" },
         ]}
       />
 
@@ -107,8 +139,11 @@ const NodeLevelGraph = ({ data }) => {
         enableTimeRange={false}
         enableLiveToggle={true}
         tooltipFields={[
-          { key: "read", label: "Read IOPS", suffix: "" },
-          { key: "write", label: "Write IOPS", suffix: "" },
+          { key: "read", label: "Read IOPS" },
+          { key: "write", label: "Write IOPS" },
+          { key: "node", label: "Node" },
+          { key: "namespace", label: "Namespace" },
+          { key: "timestamp", label: "Time" },
         ]}
       />
     </div>

@@ -3,9 +3,10 @@ import { Icon } from "@iconify/react";
 // import nodeLevelData from "../../../../data/nodeLevel"; // static fallback (dev only)
 import NodeLevelTable from "./NodeLevelTable";
 import NodeLevelGraph from "./NodeLevelGraph";
+import NodeLevelCard from "./NodeLevelCard";
 
 const NodeLevel = ({ data = [], isConnected = false, error = null }) => {
-  const [viewMode, setViewMode] = useState("table"); // 'table' or 'graph'
+  const [viewMode, setViewMode] = useState("table"); // 'table' | 'card' | 'graph'
 
   // ── DEV: Simulate random real-time updates (commented out — using live SSE now) ──
   // const [data, setData] = useState(nodeLevelData);
@@ -70,18 +71,28 @@ const NodeLevel = ({ data = [], isConnected = false, error = null }) => {
           <button
             onClick={() => setViewMode("table")}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${viewMode === "table"
-                ? "bg-white dark:bg-darkBackground text-primary shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              ? "bg-white dark:bg-darkBackground text-primary shadow-sm"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
               }`}
           >
             <Icon icon="mdi:table" className="w-4 h-4" />
             Table
           </button>
           <button
+            onClick={() => setViewMode("card")}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${viewMode === "card"
+              ? "bg-white dark:bg-darkBackground text-primary shadow-sm"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              }`}
+          >
+            <Icon icon="mdi:view-grid" className="w-4 h-4" />
+            Card
+          </button>
+          <button
             onClick={() => setViewMode("graph")}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${viewMode === "graph"
-                ? "bg-white dark:bg-darkBackground text-primary shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              ? "bg-white dark:bg-darkBackground text-primary shadow-sm"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
               }`}
           >
             <Icon icon="mdi:chart-line" className="w-4 h-4" />
@@ -93,8 +104,8 @@ const NodeLevel = ({ data = [], isConnected = false, error = null }) => {
       {/* Live Indicator */}
       <div
         className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${isConnected
-            ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-            : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+          ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+          : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
           }`}
       >
         <div
@@ -103,8 +114,8 @@ const NodeLevel = ({ data = [], isConnected = false, error = null }) => {
         />
         <span
           className={`text-sm font-medium ${isConnected
-              ? "text-green-700 dark:text-green-400"
-              : "text-red-700 dark:text-red-400"
+            ? "text-green-700 dark:text-green-400"
+            : "text-red-700 dark:text-red-400"
             }`}
         >
           {isConnected
@@ -115,11 +126,9 @@ const NodeLevel = ({ data = [], isConnected = false, error = null }) => {
 
       {/* Content Area */}
       <div className="flex-1">
-        {viewMode === "table" ? (
-          <NodeLevelTable data={data} />
-        ) : (
-          <NodeLevelGraph data={data} />
-        )}
+        {viewMode === "table" && <NodeLevelTable data={data} />}
+        {viewMode === "card" && <NodeLevelCard data={data} />}
+        {viewMode === "graph" && <NodeLevelGraph data={data} />}
       </div>
     </div>
   );
