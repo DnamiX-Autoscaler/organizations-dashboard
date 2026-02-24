@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { serviceMeshLevel } from "../../../data";
 import nodeLevelService from "../../../api/services/metrics/node_level";
 import podLevelService from "../../../api/services/metrics/pod_level";
 import appLevelService from "../../../api/services/metrics/app_level";
+import serviceMeshLevelService from "../../../api/services/metrics/service_mesh_level";
 import TitleHeader from "../../../components/common/TitleHeader";
 import TabSection from "../../../components/common/TabSection";
 import NodeLevel from "../../../components/metrics/level_usages/node_level/NodeLevel";
@@ -36,6 +36,13 @@ const LevelUsages = () => {
   const [appError, setAppError] = useState(null);
   const appAbortRef = useRef(null);
   const appRetryRef = useRef(0);
+
+  // ── Mesh Level SSE State ──
+  const [meshLevelData, setMeshLevelData] = useState([]);
+  const [meshConnected, setMeshConnected] = useState(false);
+  const [meshError, setMeshError] = useState(null);
+  const meshAbortRef = useRef(null);
+  const meshRetryRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -222,6 +229,67 @@ const LevelUsages = () => {
     };
   }, []);
 
+  // ── Mesh Level SSE ──
+  useEffect(() => {
+    let cancelled = false;
+
+    const connectSSE = async () => {
+      if (cancelled || meshRetryRef.current >= MAX_RETRIES) return;
+      setMeshError(null);
+
+      const controller = new AbortController();
+      meshAbortRef.current = controller;
+
+      await serviceMeshLevelService.connectLiveStream({
+        signal: controller.signal,
+
+        onOpen: () => {
+          if (!cancelled) {
+            setMeshConnected(true);
+            setMeshError(null);
+            meshRetryRef.current = 0;
+          }
+        },
+
+        onMessage: (data) => {
+          if (cancelled) return;
+          setMeshConnected(true);
+          setMeshError(null);
+          if (Array.isArray(data)) {
+            setMeshLevelData(data);
+          }
+        },
+
+        onError: () => {
+          if (cancelled) return;
+          setMeshConnected(false);
+          meshRetryRef.current += 1;
+          if (meshRetryRef.current < MAX_RETRIES) {
+            setMeshError("Connection lost. Reconnecting...");
+            setTimeout(() => { if (!cancelled) connectSSE(); }, 3000);
+          } else {
+            setMeshError("Max retry attempts reached. Please refresh the page.");
+          }
+        },
+      });
+
+      if (!cancelled) {
+        setMeshConnected(false);
+        setTimeout(() => { if (!cancelled) connectSSE(); }, 1000);
+      }
+    };
+
+    connectSSE();
+
+    return () => {
+      cancelled = true;
+      if (meshAbortRef.current) {
+        meshAbortRef.current.abort();
+        meshAbortRef.current = null;
+      }
+    };
+  }, []);
+
   const tabs = [
     { key: "node", label: "Node Level", icon: "mdi:server" },
     { key: "pod", label: "Pod Level", icon: "mdi:cube-outline" },
@@ -272,9 +340,13 @@ const LevelUsages = () => {
           error={appError}
         />
       )}
-      {/* Service Mesh Level */}
+      {/* Service Mesh Level — live SSE data */}
       {activeTab === "serviceMesh" && (
-        <ServiceMeshLevel data={serviceMeshLevel} />
+        <ServiceMeshLevel
+          data={meshLevelData}
+          isConnected={meshConnected}
+          error={meshError}
+        />
       )}
     </div>
   );

@@ -14,6 +14,9 @@ const ENDPOINTS = {
     APP: {
         STREAM: "/apps/live-stream",
     },
+    MESH: {
+        STREAM: "/mesh/live-stream",
+    },
 };
 
 export default ENDPOINTS;
