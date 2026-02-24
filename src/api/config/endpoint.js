@@ -8,6 +8,9 @@ const ENDPOINTS = {
     NODE: {
         STREAM: "/nodes/live-stream",
     },
+    POD: {
+        STREAM: "/pods/live-stream",
+    },
 };
 
 export default ENDPOINTS;
