@@ -37,6 +37,16 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "/stress-index": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/graph": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   optimizeDeps: {

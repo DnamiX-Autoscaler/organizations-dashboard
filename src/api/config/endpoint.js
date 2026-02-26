@@ -17,6 +17,12 @@ const ENDPOINTS = {
     MESH: {
         STREAM: "/mesh/live-stream",
     },
+    STRESS_INDEX: {
+        STREAM: "/stress-index/live-stream",
+    },
+    GRAPH_CENTRALITY: {
+        STREAM: "/graph/centrality/live-stream",
+    },
 };
 
 export default ENDPOINTS;
