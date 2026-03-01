@@ -23,6 +23,9 @@ const ENDPOINTS = {
     GRAPH_CENTRALITY: {
         STREAM: "/graph/centrality/live-stream",
     },
+    CONFIG: {
+        GET: "/config/runtime",
+    },
 };
 
 export default ENDPOINTS;
