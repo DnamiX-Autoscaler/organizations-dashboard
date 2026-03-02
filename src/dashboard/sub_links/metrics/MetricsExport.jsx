@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import TitleHeader from "../../../components/common/TitleHeader";
 import TabSection from "../../../components/common/TabSection";
@@ -6,20 +6,22 @@ import ExportStatistics from "../../../components/metrics/export/ExportStatistic
 import MetricsFieldsTable from "../../../components/metrics/export/MetricsFieldsTable";
 import MetricsDataTable from "../../../components/metrics/export/MetricsDataTable";
 import {
-    fetchExportStatus,
-    startMetricsCollection,
-    stopMetricsCollection,
     downloadDataset,
     metricsFields,
 } from "../../../data/metricsExport";
+import exporterService from "../../../api/services/metrics/exporter";
 
 const MetricsExport = () => {
     const [activeTab, setActiveTab] = useState("overview");
-    const [status, setStatus] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [actionLoading, setActionLoading] = useState(false);
+    const [collectedRecords, setCollectedRecords] = useState([]);
+    const [isCollecting, setIsCollecting] = useState(false);
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [downloadingCSV, setDownloadingCSV] = useState(false);
     const [downloadingJSON, setDownloadingJSON] = useState(false);
+
+    const abortRef = useRef(null);
+    const timerRef = useRef(null);
+    const startTimeRef = useRef(null);
 
     const tabs = [
         { key: "overview", label: "Overview", icon: "mdi:view-dashboard" },
@@ -27,60 +29,85 @@ const MetricsExport = () => {
         { key: "fields", label: "Field Definitions", icon: "mdi:table" },
     ];
 
-    // Fetch status
-    const loadStatus = async () => {
-        setLoading(true);
-        try {
-            const data = await fetchExportStatus();
-            setStatus(data);
-        } catch (error) {
-            console.error("Failed to fetch export status:", error);
-        } finally {
-            setLoading(false);
-        }
+    // Computed stats derived from accumulated records — same shape ExportStatistics expects
+    const computedStatus = {
+        isRunning: isCollecting,
+        totalRecords: collectedRecords.length,
+        exportPath: {
+            csv: "output/dataset/metrics_dataset.csv",
+            json: "output/dataset/metrics_dataset.jsonl",
+        },
+        stats: {
+            recordsPerSecond: elapsedSeconds > 0
+                ? +(collectedRecords.length / elapsedSeconds).toFixed(1)
+                : 0,
+            // ~500 bytes/record for CSV, ~620 bytes/record for JSON
+            totalSize: {
+                csv: +(collectedRecords.length * 500 / (1024 * 1024)).toFixed(3),
+                json: +(collectedRecords.length * 620 / (1024 * 1024)).toFixed(3),
+            },
+            duration: elapsedSeconds,
+        },
     };
 
-    // Initial load
+    // Clean up SSE + timer on unmount
     useEffect(() => {
-        loadStatus();
+        return () => {
+            if (abortRef.current) abortRef.current.abort();
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
     }, []);
 
-    // Manual refresh only
-    const handleRefresh = async () => {
-        await loadStatus();
+    // Start SSE collection — clears previous session data first
+    const handleStart = () => {
+        setCollectedRecords([]);
+        setElapsedSeconds(0);
+        setIsCollecting(true);
+
+        startTimeRef.current = Date.now();
+        timerRef.current = setInterval(() => {
+            setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000));
+        }, 1000);
+
+        abortRef.current = new AbortController();
+
+        exporterService.connectStream({
+            signal: abortRef.current.signal,
+            onOpen: () => console.log("Metrics stream connected"),
+            onMessage: (batch) => {
+                // batch = { "namespace/service": { ...metrics }, ... }
+                // Append each new service record independently (no replacement)
+                const records = Object.values(batch);
+                if (records.length > 0) {
+                    setCollectedRecords((prev) => [...prev, ...records]);
+                }
+            },
+            onError: (err) => {
+                console.error("Metrics stream error:", err);
+                handleStop();
+            },
+        });
     };
 
-    // Start collection
-    const handleStart = async () => {
-        setActionLoading(true);
-        try {
-            await startMetricsCollection();
-            await loadStatus();
-        } catch (error) {
-            console.error("Failed to start collection:", error);
-        } finally {
-            setActionLoading(false);
+    // Stop collection and SSE stream
+    const handleStop = () => {
+        if (abortRef.current) {
+            abortRef.current.abort();
+            abortRef.current = null;
         }
-    };
-
-    // Stop collection
-    const handleStop = async () => {
-        setActionLoading(true);
-        try {
-            await stopMetricsCollection();
-            await loadStatus();
-        } catch (error) {
-            console.error("Failed to stop collection:", error);
-        } finally {
-            setActionLoading(false);
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
         }
+        setIsCollecting(false);
     };
 
-    // Download CSV
+    // Export collected records as CSV
     const handleDownloadCSV = async () => {
+        if (collectedRecords.length === 0) return;
         setDownloadingCSV(true);
         try {
-            await downloadDataset("csv");
+            await downloadDataset("csv", { data: collectedRecords });
         } catch (error) {
             console.error("Failed to download CSV:", error);
         } finally {
@@ -88,25 +115,18 @@ const MetricsExport = () => {
         }
     };
 
-    // Download JSON
+    // Export collected records as JSON Lines
     const handleDownloadJSON = async () => {
+        if (collectedRecords.length === 0) return;
         setDownloadingJSON(true);
         try {
-            await downloadDataset("json");
+            await downloadDataset("json", { data: collectedRecords });
         } catch (error) {
             console.error("Failed to download JSON:", error);
         } finally {
             setDownloadingJSON(false);
         }
     };
-
-    if (loading || !status) {
-        return (
-            <div className="flex items-center justify-center py-16">
-                <Icon icon="mdi:loading" className="w-8 h-8 text-primary animate-spin" />
-            </div>
-        );
-    }
 
     return (
         <div className="space-y-6">
@@ -117,59 +137,55 @@ const MetricsExport = () => {
 
             {/* Status Banner */}
             <div
-                className={`flex items-center justify-between p-4 rounded-lg border ${status.isRunning
+                className={`flex items-center justify-between p-4 rounded-lg border ${
+                    isCollecting
                         ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
                         : "bg-gray-50 border-gray-200 dark:bg-gray-900/20 dark:border-gray-700"
-                    }`}
+                }`}
             >
                 <div className="flex items-center gap-3">
                     <div
-                        className={`w-3 h-3 rounded-full ${status.isRunning ? "bg-green-500 animate-pulse" : "bg-gray-400"
-                            }`}
+                        className={`w-3 h-3 rounded-full ${
+                            isCollecting ? "bg-green-500 animate-pulse" : "bg-gray-400"
+                        }`}
                     />
                     <div>
                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                            Collection Status: {status.isRunning ? "Running" : "Stopped"}
+                            Collection Status: {isCollecting ? "Running" : "Stopped"}
                         </p>
                         <p className="text-xs text-gray-600 dark:text-gray-400">
-                            {status.isRunning
-                                ? "Metrics are being collected in real-time"
-                                : "Start the pipeline to begin collecting metrics"}
+                            {isCollecting
+                                ? `Collecting from live stream — ${collectedRecords.length.toLocaleString()} records accumulated (${elapsedSeconds}s)`
+                                : collectedRecords.length > 0
+                                    ? `Collection stopped — ${collectedRecords.length.toLocaleString()} records ready for export`
+                                    : "Start the pipeline to begin collecting metrics"}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex gap-2">
-                    {!status.isRunning ? (
+                    {!isCollecting ? (
                         <button
                             onClick={handleStart}
-                            disabled={actionLoading}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-all rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50"
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-all rounded-lg bg-primary hover:bg-primary/90"
                         >
-                            <Icon
-                                icon={actionLoading ? "mdi:loading" : "mdi:play"}
-                                className={`w-4 h-4 ${actionLoading ? "animate-spin" : ""}`}
-                            />
+                            <Icon icon="mdi:play" className="w-4 h-4" />
                             Start Collection
                         </button>
                     ) : (
                         <button
                             onClick={handleStop}
-                            disabled={actionLoading}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-all bg-red-500 rounded-lg hover:bg-red-600 disabled:opacity-50"
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-all bg-red-500 rounded-lg hover:bg-red-600"
                         >
-                            <Icon
-                                icon={actionLoading ? "mdi:loading" : "mdi:stop"}
-                                className={`w-4 h-4 ${actionLoading ? "animate-spin" : ""}`}
-                            />
+                            <Icon icon="mdi:stop" className="w-4 h-4" />
                             Stop Collection
                         </button>
                     )}
                 </div>
             </div>
 
-            {/* Statistics */}
-            <ExportStatistics status={status} />
+            {/* Live Statistics */}
+            <ExportStatistics status={computedStatus} />
 
             {/* Tabs */}
             <TabSection tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
@@ -192,14 +208,14 @@ const MetricsExport = () => {
                                             CSV Dataset
                                         </p>
                                         <p className="font-mono text-xs text-gray-600 dark:text-gray-400">
-                                            {status.exportPath.csv}
+                                            {computedStatus.exportPath.csv}
                                         </p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={handleDownloadCSV}
-                                    disabled={downloadingCSV}
-                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-all rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50"
+                                    disabled={downloadingCSV || collectedRecords.length === 0}
+                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-all rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <Icon
                                         icon={downloadingCSV ? "mdi:loading" : "mdi:download"}
@@ -218,14 +234,14 @@ const MetricsExport = () => {
                                             JSON Lines Dataset
                                         </p>
                                         <p className="font-mono text-xs text-gray-600 dark:text-gray-400">
-                                            {status.exportPath.json}
+                                            {computedStatus.exportPath.json}
                                         </p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={handleDownloadJSON}
-                                    disabled={downloadingJSON}
-                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-all rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50"
+                                    disabled={downloadingJSON || collectedRecords.length === 0}
+                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-all rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <Icon
                                         icon={downloadingJSON ? "mdi:loading" : "mdi:download"}
@@ -258,7 +274,7 @@ const MetricsExport = () => {
                 </div>
             )}
 
-            {activeTab === "data" && <MetricsDataTable />}
+            {activeTab === "data" && <MetricsDataTable data={collectedRecords} />}
 
             {activeTab === "fields" && <MetricsFieldsTable />}
         </div>
@@ -266,3 +282,4 @@ const MetricsExport = () => {
 };
 
 export default MetricsExport;
+

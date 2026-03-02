@@ -35,6 +35,9 @@ const ENDPOINTS = {
     MONITORING_SERVICES: {
         GET: "/runtime/monitoring/services",
     },
+    METRICS_EXPORT: {
+        STREAM: "/metrics/live-stream",
+    },
 };
 
 export default ENDPOINTS;
