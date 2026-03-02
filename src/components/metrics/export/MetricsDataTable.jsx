@@ -99,7 +99,7 @@ const MetricsDataTable = ({ data = [], isCollecting = false }) => {
                     >
                         Previous
                     </button>
-                    <span className="px-3 py-1 text-sm">
+                    <span className="px-3 py-1 text-sm text-gray-700 dark:text-white">
                         Page {currentPage} of {totalPages}
                     </span>
                     <button
