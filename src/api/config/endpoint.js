@@ -26,6 +26,9 @@ const ENDPOINTS = {
     CONFIG: {
         GET: "/config/runtime",
     },
+    RUNNING_PODS: {
+        GET: "/runtime/pods",
+    },
 };
 
 export default ENDPOINTS;
