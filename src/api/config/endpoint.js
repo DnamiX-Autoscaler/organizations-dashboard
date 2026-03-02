@@ -29,6 +29,9 @@ const ENDPOINTS = {
     RUNNING_PODS: {
         GET: "/runtime/pods",
     },
+    RUNNING_SERVICES: {
+        GET: "/runtime/services",
+    },
 };
 
 export default ENDPOINTS;
