@@ -32,6 +32,9 @@ const ENDPOINTS = {
     RUNNING_SERVICES: {
         GET: "/runtime/services",
     },
+    MONITORING_SERVICES: {
+        GET: "/runtime/monitoring/services",
+    },
 };
 
 export default ENDPOINTS;
