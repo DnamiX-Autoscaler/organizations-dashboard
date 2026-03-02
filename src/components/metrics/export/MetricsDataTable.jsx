@@ -1,15 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 
-const MetricsDataTable = ({ data = [] }) => {
+const MetricsDataTable = ({ data = [], isCollecting = false }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [recordsPerPage] = useState(10);
+
+    // While collecting, newest records are at the end — reverse for display
+    // so page 1 always shows the latest batch without the user having to paginate
+    const displayData = isCollecting ? [...data].reverse() : data;
+
+    // Reset to page 1 whenever new records arrive during collection
+    useEffect(() => {
+        if (isCollecting) {
+            setCurrentPage(1);
+        }
+    }, [data.length, isCollecting]);
 
     // Calculate pagination
     const indexOfLastRecord = currentPage * recordsPerPage;
     const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
-    const currentRecords = data.slice(indexOfFirstRecord, indexOfLastRecord);
-    const totalPages = Math.ceil(data.length / recordsPerPage);
+    const currentRecords = displayData.slice(indexOfFirstRecord, indexOfLastRecord);
+    const totalPages = Math.max(1, Math.ceil(displayData.length / recordsPerPage));
 
     // Empty state
     if (data.length === 0) {
@@ -27,6 +38,14 @@ const MetricsDataTable = ({ data = [] }) => {
 
     return (
         <div className="space-y-4">
+            {/* Live indicator header */}
+            {isCollecting && (
+                <div className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-800 dark:text-green-400">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    Live — collecting metrics. Newest records shown first. Total: {data.length.toLocaleString()} records
+                </div>
+            )}
+
             {/* Table */}
             <div className="overflow-hidden bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
                 <div className="overflow-x-auto max-h-[600px]">
@@ -69,7 +88,8 @@ const MetricsDataTable = ({ data = [] }) => {
             {/* Pagination */}
             <div className="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Showing {indexOfFirstRecord + 1} to {Math.min(indexOfLastRecord, data.length)} of {data.length} records
+                    Showing {indexOfFirstRecord + 1} to {Math.min(indexOfLastRecord, displayData.length)} of {displayData.length} records
+                    {isCollecting && <span className="ml-2 text-green-600 dark:text-green-400">(growing)</span>}
                 </div>
                 <div className="flex gap-2">
                     <button
@@ -84,7 +104,7 @@ const MetricsDataTable = ({ data = [] }) => {
                     </span>
                     <button
                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                        disabled={currentPage === totalPages || data.length === 0}
+                        disabled={currentPage === totalPages || displayData.length === 0}
                         className="px-3 py-1 text-sm border border-gray-200 rounded dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
                         Next

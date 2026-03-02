@@ -61,6 +61,7 @@ const MetricsExport = () => {
     setCollectedRecords([]);
     setElapsedSeconds(0);
     setIsCollecting(true);
+    setActiveTab("data"); // auto-switch to show live table
 
     startTimeRef.current = Date.now();
     timerRef.current = setInterval(() => {
@@ -299,7 +300,9 @@ const MetricsExport = () => {
         </div>
       )}
 
-      {activeTab === "data" && <MetricsDataTable data={collectedRecords} />}
+      {activeTab === "data" && (
+        <MetricsDataTable data={collectedRecords} isCollecting={isCollecting} />
+      )}
 
       {activeTab === "fields" && <MetricsFieldsTable />}
     </div>
