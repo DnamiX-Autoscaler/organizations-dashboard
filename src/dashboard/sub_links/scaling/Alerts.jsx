@@ -6,7 +6,7 @@ import TabSection from "../../../components/common/TabSection";
 import FilterDropdown from "../../../components/common/FilterDropdown";
 import ClearFilterButton from "../../../components/common/ClearFilterButton";
 import Table from "../../../components/common/Table";
-import { useScalingAlerts } from "../../../hooks/useScalingAlerts";
+import { useAlertsSSE } from "../../../hooks/useAlertsSSE";
 
 const severityStyles = {
   critical: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
@@ -25,7 +25,7 @@ const statusStyles = {
 };
 
 const Alerts = () => {
-  const alertsData = useScalingAlerts(staticAlertsData);
+  const alertsData = useAlertsSSE(staticAlertsData);
   const [activeTab, setActiveTab] = useState("active");
   const [selectedService, setSelectedService] = useState("");
   const [selectedSeverity, setSelectedSeverity] = useState("");

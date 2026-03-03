@@ -10,6 +10,7 @@ const AUTOSCALING_ENDPOINTS = {
     },
     ALERTS: {
         PUBLISH: "/alerts/publish",
+        STREAM: "/alerts/stream"
     },
 };
 

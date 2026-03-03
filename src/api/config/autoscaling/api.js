@@ -39,6 +39,10 @@ export const getDeploymentStatusStream = (onMessage, onError) => {
     return createStream(AUTOSCALING_ENDPOINTS.DEPLOYMENT_STATUS.STREAM, onMessage, onError);
 };
 
+export const getAlertsStream = (onMessage, onError) => {
+    return createStream(AUTOSCALING_ENDPOINTS.ALERTS.STREAM, onMessage, onError);
+};
+
 export const publishAlert = async (alertData) => {
     try {
         const response = await fetch(`${BASE_URL}${AUTOSCALING_ENDPOINTS.ALERTS.PUBLISH}`, {
