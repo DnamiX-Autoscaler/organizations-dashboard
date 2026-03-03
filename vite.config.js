@@ -62,6 +62,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "/api/v1": {
+        target: "http://localhost:6000",
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   optimizeDeps: {

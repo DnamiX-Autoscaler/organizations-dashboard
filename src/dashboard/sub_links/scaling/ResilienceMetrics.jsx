@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { rollbackHistoryData } from "../../../data";
+import React, { useMemo, useState, useEffect } from "react";
+import { getResilienceMetricsStream } from "../../../api/config/autoscaling/api";
 import TitleHeader from "../../../components/common/TitleHeader";
 import TabSection from "../../../components/common/TabSection";
 import FilterDropdown from "../../../components/common/FilterDropdown";
@@ -13,25 +13,38 @@ const ResilienceMetrics = () => {
   const [selectedProject, setSelectedProject] = useState("");
   const [selectedDeployment, setSelectedDeployment] = useState("");
   const [selectedDecision, setSelectedDecision] = useState("");
+  const [metricsData, setMetricsData] = useState([]);
 
-  const filteredData = rollbackHistoryData.filter((item) => {
+  useEffect(() => {
+    const stream = getResilienceMetricsStream((data) => {
+      setMetricsData((prev) => {
+        const exists = prev.find(m => m._id === data._id);
+        if (exists) return prev;
+        return [data, ...prev].slice(0, 50);
+      });
+    });
+
+    return () => stream.close();
+  }, []);
+
+  const filteredData = metricsData.filter((item) => {
     if (selectedProject && item.project !== selectedProject) return false;
     if (selectedDeployment && item.deployment !== selectedDeployment) return false;
-    if (selectedDecision && item.decision !== selectedDecision) return false;
+    if (selectedDecision && item.status !== selectedDecision) return false;
     return true;
   });
 
   const uniqueProjects = useMemo(
-    () => [...new Set(rollbackHistoryData.map((item) => item.project).filter(Boolean))],
-    []
+    () => [...new Set(metricsData.map((item) => item.project).filter(Boolean))],
+    [metricsData]
   );
   const uniqueDeployments = useMemo(
-    () => [...new Set(rollbackHistoryData.filter(i => !selectedProject || i.project === selectedProject).map((item) => item.deployment))],
-    [selectedProject]
+    () => [...new Set(metricsData.filter(i => !selectedProject || i.project === selectedProject).map((item) => item.deployment))],
+    [metricsData, selectedProject]
   );
   const uniqueDecisions = useMemo(
-    () => [...new Set(rollbackHistoryData.map((item) => item.decision))],
-    []
+    () => [...new Set(metricsData.map((item) => item.status))],
+    [metricsData]
   );
 
   const projectOptions = uniqueProjects.map((project) => ({ value: project, label: project }));
@@ -53,21 +66,26 @@ const ResilienceMetrics = () => {
   const hierarchicalData = useMemo(() => {
     const grouped = {};
 
-    rollbackHistoryData.forEach(item => {
+    metricsData.forEach(item => {
       const proj = item.project || "Unassigned";
       const serv = item.deployment;
 
       if (!grouped[proj]) grouped[proj] = {};
 
-      // For simplicity, using the latest metrics for each service in the hierarchical view
-      // In a real app, this might be a rolling average or real-time snapshot
       if (!grouped[proj][serv]) {
-        grouped[proj][serv] = item.metrics;
+        // Map the detailed validation metrics to the format expected by ProjectMetricsAccordion
+        const metrics = {};
+        if (item.validation && item.validation.metricsEvaluation) {
+          item.validation.metricsEvaluation.forEach(m => {
+            metrics[m.metric] = m.value;
+          });
+        }
+        grouped[proj][serv] = metrics;
       }
     });
 
     return grouped;
-  }, []);
+  }, [metricsData]);
 
   const metricAverages = useMemo(() => {
     if (filteredData.length === 0) {
@@ -83,7 +101,12 @@ const ResilienceMetrics = () => {
       };
     }
 
-    const avg = (key) => filteredData.reduce((sum, d) => sum + (d.metrics?.[key] || 0), 0) / filteredData.length;
+    const extractMetric = (item, key) => {
+      const m = item.validation?.metricsEvaluation?.find(e => e.metric === key);
+      return m ? m.value : 0;
+    };
+
+    const avg = (key) => filteredData.reduce((sum, d) => sum + extractMetric(d, key), 0) / filteredData.length;
 
     return {
       successRate: avg("successRate"),
@@ -97,23 +120,30 @@ const ResilienceMetrics = () => {
     };
   }, [filteredData]);
 
-  const chartData = filteredData.map((item) => ({
-    time: new Date(item.timestamp).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }),
-    timeStamp: item.timestamp,
-    successRate: item.metrics?.successRate,
-    errorRate: item.metrics?.errorRate,
-    p95LatencyAfter: item.metrics?.p95LatencyAfter,
-    cpuPercent: item.metrics?.cpuPercent,
-    memPercent: item.metrics?.memPercent,
-    trafficRecovery: item.metrics?.trafficRecovery,
-    deployment: item.deployment,
-    decision: item.decision,
-    project: item.project,
-  }));
+  const chartData = filteredData.map((item) => {
+    const extractMetric = (key) => {
+      const m = item.validation?.metricsEvaluation?.find(e => e.metric === key);
+      return m ? m.value : null;
+    };
+
+    return {
+      time: new Date(item.timestamp).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }),
+      timeStamp: item.timestamp,
+      successRate: extractMetric("successRate"),
+      errorRate: extractMetric("errorRate"),
+      p95LatencyAfter: extractMetric("p95LatencyAfter"),
+      cpuPercent: extractMetric("cpuPercent"),
+      memPercent: extractMetric("memPercent"),
+      trafficRecovery: extractMetric("trafficRecovery"),
+      deployment: item.deployment,
+      status: item.status,
+      project: item.project,
+    };
+  });
 
   const tooltipFieldsBase = [
     { key: "project", label: "Project" },

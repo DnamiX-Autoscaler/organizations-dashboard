@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
-import { scalingEventsData } from "../../../data";
+import { getScalingEventsStream } from "../../../api/config/autoscaling/api";
 import TitleHeader from "../../../components/common/TitleHeader";
 import TabSection from "../../../components/common/TabSection";
 import FilterDropdown from "../../../components/common/FilterDropdown";
@@ -11,20 +11,34 @@ const ScalingEvent = () => {
   const [activeTab, setActiveTab] = useState("table");
   const [selectedDeployment, setSelectedDeployment] = useState("");
   const [selectedDecision, setSelectedDecision] = useState("");
+  const [events, setEvents] = useState([]);
+
+  useEffect(() => {
+    const stream = getScalingEventsStream((data) => {
+      setEvents((prev) => {
+        // Prevent duplicates if same ID comes through
+        const exists = prev.find(e => e._id === data._id);
+        if (exists) return prev;
+        return [data, ...prev].slice(0, 50);
+      });
+    });
+
+    return () => stream.close();
+  }, []);
 
   // Filter logic
-  const filteredData = scalingEventsData.filter((item) => {
+  const filteredData = events.filter((item) => {
     if (selectedDeployment && item.deployment !== selectedDeployment) return false;
-    if (selectedDecision && item.decision !== selectedDecision) return false;
+    if (selectedDecision && item.status !== selectedDecision) return false;
     return true;
   });
 
   // Get unique values for filters
   const uniqueDeployments = [
-    ...new Set(scalingEventsData.map((item) => item.deployment)),
+    ...new Set(events.map((item) => item.deployment)),
   ];
   const uniqueDecisions = [
-    ...new Set(scalingEventsData.map((item) => item.decision)),
+    ...new Set(events.map((item) => item.status)),
   ];
 
   // Prepare dropdown options
@@ -78,20 +92,20 @@ const ScalingEvent = () => {
   const columns = [
     { key: "timestamp", label: "Timestamp", icon: "mdi:clock-outline", bold: false },
     { key: "deployment", label: "Deployment", icon: "mdi:server", bold: true },
-    { key: "requestedPods", label: "Previous Replicas", icon: "mdi:numeric", bold: false },
+    { key: "scaleAction", label: "Action", icon: "mdi:swap-vertical", bold: false },
+    { key: "previousReplicas", label: "Previous Replicas", icon: "mdi:numeric", bold: false },
     { key: "appliedReplicas", label: "Applied Replicas", icon: "mdi:check-circle", bold: false },
-    { key: "decision", label: "Decision", icon: "mdi:flag", bold: false },
-    { key: "reason", label: "Reason", icon: "mdi:information", bold: false },
+    { key: "decision", label: "Status", icon: "mdi:flag", bold: false },
   ];
 
   // Prepare data for table
   const tableData = filteredData.map((item) => ({
     timestamp: formatTimestamp(item.timestamp),
     deployment: item.deployment,
-    requestedPods: item.requestedPods,
-    appliedReplicas: item.appliedReplicas,
-    decision: getDecisionBadge(item.decision),
-    reason: item.reason,
+    scaleAction: item.scale_action,
+    previousReplicas: item.previous_replicas,
+    appliedReplicas: item.required_replicas,
+    decision: getDecisionBadge(item.status),
   }));
 
   return (
@@ -135,7 +149,7 @@ const ScalingEvent = () => {
         {/* Result Count */}
         <div className="ml-auto text-sm text-gray-600 dark:text-gray-400">
           Showing <span className="font-semibold">{filteredData.length}</span> of{" "}
-          <span className="font-semibold">{scalingEventsData.length}</span> events
+          <span className="font-semibold">{events.length}</span> events
         </div>
       </div>
 

@@ -2,10 +2,35 @@ import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import realTimeScalingData from "../../../data/realTimeScalingData";
+import { getScalingEventsStream } from "../../../api/config/autoscaling/api";
 
 const RealTimeScaling = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
-    const { deployments, recentActivity } = realTimeScalingData;
+    const { deployments, recentActivity: initialActivity } = realTimeScalingData;
+    const [recentActivity, setRecentActivity] = useState([]);
+
+    useEffect(() => {
+        const stream = getScalingEventsStream((data) => {
+            setRecentActivity(prev => {
+                const exists = prev.find(e => e._id === data._id);
+                if (exists) return prev;
+                // Map backend format to component expected format
+                const mapped = {
+                    _id: data._id,
+                    timestamp: data.timestamp,
+                    deployment: data.deployment,
+                    decision: data.status,
+                    action: data.scale_action === 'scale_up' ? 'Scaling Up' : 'Scaling Down',
+                    from: data.previous_replicas,
+                    to: data.required_replicas,
+                    reason: data.message || 'Auto-scaling decision based on metrics'
+                };
+                return [mapped, ...prev].slice(0, 20);
+            });
+        });
+
+        return () => stream.close();
+    }, []);
 
     // Mock time-series data for graphs
     const [cpuData, setCpuData] = useState([
