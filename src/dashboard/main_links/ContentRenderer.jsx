@@ -29,6 +29,7 @@ import Alerts from "../sub_links/scaling/Alerts";
 import Reports from "../sub_links/scaling/Reports";
 import CostResourceImpact from "../sub_links/scaling/CostResourceImpact";
 import DeploymentHealth from "../sub_links/scaling/DeploymentHealth";
+import HistoricalTimeSeries from "../sub_links/metrics/HistoricalTimeSeries";
 
 // Add more imports as needed...
 
@@ -53,7 +54,8 @@ const ContentRenderer = () => {
       services: <RunningServices />,
       [`prometheus-ips`]: <RunningPrometheusIPs />,
       [`monitoring-notes`]: <MonitoringNotes />,
-      [`data-exporter`]: <MetricsExport />
+      [`data-exporter`]: <MetricsExport />,
+      [`historical-time-series`]: <HistoricalTimeSeries />
     },
     scaling: {
       event: <ScalingEvent />,

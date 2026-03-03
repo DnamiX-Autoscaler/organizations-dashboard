@@ -134,9 +134,9 @@ const ServiceCentralityTable = ({ services }) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200 dark:bg-darkBackground dark:divide-gray-700">
-            {sortedServices.map((service) => (
+            {sortedServices.map((service, idx) => (
               <tr
-                key={service.id}
+                key={`${service.namespace ?? ''}_${service.id ?? service.service_name ?? idx}`}
                 className="transition-colors hover:bg-gray-50 dark:hover:bg-darkBackgroundVery"
               >
                 <td className="px-6 py-4 whitespace-nowrap">

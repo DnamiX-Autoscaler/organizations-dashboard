@@ -27,6 +27,7 @@ const SUB_MENUS = {
     { id: "prometheus-ips", label: "Prometheus IPs", hasNotification: false },
     { id: "monitoring-notes", label: "Monitoring Notes", hasNotification: false },
     { id: "data-exporter", label: "Data Exporter", hasNotification: false },
+    { id: "historical-time-series", label: "Historical Time Series", hasNotification: false },
   ],
   mlmodel: [
     { id: "models", label: "Models", hasNotification: false },

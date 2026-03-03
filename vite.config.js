@@ -62,6 +62,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "/timeseries": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   optimizeDeps: {
