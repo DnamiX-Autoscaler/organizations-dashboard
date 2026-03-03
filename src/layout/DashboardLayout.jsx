@@ -3,7 +3,7 @@ import Header from "../components/common/Header";
 import SideBar from "../components/common/SideBar";
 import { ThemeProvider } from "../utils/Theme";
 import { RouteProvider } from "../utils/RouteContext";
-import LiveAlertSimulation from "../components/common/LiveAlertSimulation";
+import ScalingNotification from "../components/common/ScalingNotification";
 
 const DashboardLayout = ({ children }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -16,7 +16,7 @@ const DashboardLayout = ({ children }) => {
     <ThemeProvider>
       <RouteProvider>
         <div className="fixed inset-0 flex transition-colors duration-200 bg-backgroundLight dark:bg-darkBackgroundVery">
-          <LiveAlertSimulation />
+          <ScalingNotification />
           <SideBar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
 
           <div className="flex flex-col flex-1 h-screen overflow-hidden transition-all duration-300">

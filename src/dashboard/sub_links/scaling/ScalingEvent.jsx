@@ -159,6 +159,8 @@ const ScalingEvent = () => {
           columns={columns}
           data={tableData}
           empty="No scaling events found"
+          itemsPerPage={10}
+          showPagination={true}
         />
       )}
     </div>

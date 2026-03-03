@@ -1,26 +1,31 @@
 import React, { useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
-import { alertsData } from "../../../data";
+import { alertsData as staticAlertsData } from "../../../data";
 import TitleHeader from "../../../components/common/TitleHeader";
 import TabSection from "../../../components/common/TabSection";
 import FilterDropdown from "../../../components/common/FilterDropdown";
 import ClearFilterButton from "../../../components/common/ClearFilterButton";
 import Table from "../../../components/common/Table";
+import { useScalingAlerts } from "../../../hooks/useScalingAlerts";
 
 const severityStyles = {
   critical: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
   high: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
   medium: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
   low: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  info: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
 };
 
 const statusStyles = {
   open: "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
   acknowledged: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
   resolved: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+  SUCCESS_VALIDATED: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  ROLLED_BACK: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
 };
 
 const Alerts = () => {
+  const alertsData = useScalingAlerts(staticAlertsData);
   const [activeTab, setActiveTab] = useState("active");
   const [selectedService, setSelectedService] = useState("");
   const [selectedSeverity, setSelectedSeverity] = useState("");

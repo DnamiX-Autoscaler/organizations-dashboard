@@ -8,6 +8,9 @@ const AUTOSCALING_ENDPOINTS = {
     DEPLOYMENT_STATUS: {
         STREAM: "/deployment-status/stream",
     },
+    ALERTS: {
+        PUBLISH: "/alerts/publish",
+    },
 };
 
 export default AUTOSCALING_ENDPOINTS;
