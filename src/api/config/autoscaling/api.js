@@ -34,3 +34,7 @@ export const getScalingEventsStream = (onMessage, onError) => {
 export const getResilienceMetricsStream = (onMessage, onError) => {
     return createStream(AUTOSCALING_ENDPOINTS.RESILIENCE_METRICS.STREAM, onMessage, onError);
 };
+
+export const getDeploymentStatusStream = (onMessage, onError) => {
+    return createStream(AUTOSCALING_ENDPOINTS.DEPLOYMENT_STATUS.STREAM, onMessage, onError);
+};

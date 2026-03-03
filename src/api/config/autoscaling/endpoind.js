@@ -5,6 +5,9 @@ const AUTOSCALING_ENDPOINTS = {
     RESILIENCE_METRICS: {
         STREAM: "/resilience-metrics/stream",
     },
+    DEPLOYMENT_STATUS: {
+        STREAM: "/deployment-status/stream",
+    },
 };
 
 export default AUTOSCALING_ENDPOINTS;

@@ -2,19 +2,19 @@ import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import realTimeScalingData from "../../../data/realTimeScalingData";
-import { getScalingEventsStream } from "../../../api/config/autoscaling/api";
+import { getScalingEventsStream, getDeploymentStatusStream } from "../../../api/config/autoscaling/api";
 
 const RealTimeScaling = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
-    const { deployments, recentActivity: initialActivity } = realTimeScalingData;
+    const { deployments: initialDeployments, recentActivity: initialActivity } = realTimeScalingData;
     const [recentActivity, setRecentActivity] = useState([]);
+    const [deployments, setDeployments] = useState([]);
 
     useEffect(() => {
-        const stream = getScalingEventsStream((data) => {
+        const eventsStream = getScalingEventsStream((data) => {
             setRecentActivity(prev => {
                 const exists = prev.find(e => e._id === data._id);
                 if (exists) return prev;
-                // Map backend format to component expected format
                 const mapped = {
                     _id: data._id,
                     timestamp: data.timestamp,
@@ -29,47 +29,60 @@ const RealTimeScaling = () => {
             });
         });
 
-        return () => stream.close();
+        const statusStream = getDeploymentStatusStream((data) => {
+            setDeployments(prev => {
+                const index = prev.findIndex(d => d.name === data.deployment);
+                const updatedDeployment = {
+                    name: data.deployment,
+                    currentReplicas: data.required_replicas || data.previous_replicas,
+                    desiredReplicas: data.required_replicas,
+                    trend: data.scale_action === 'scale_up' ? 'scaling-up' : (data.scale_action === 'scale_down' ? 'scaling-down' : 'stable'),
+                    status: data.status === 'SUCCESS_VALIDATED' ? 'healthy' : (data.status === 'SCALING' ? 'scaling' : 'error'),
+                    lastScalingTime: data.timestamp,
+                    lastAction: data.scale_action === 'scale_up' ? 'Scale up' : 'Scale down',
+                    cpuUsage: data.validation?.metricsEvaluation?.find(m => m.metric === 'cpuPercent')?.value || 0,
+                    memoryUsage: data.validation?.metricsEvaluation?.find(m => m.metric === 'memPercent')?.value || 0,
+                };
+
+                if (index !== -1) {
+                    const next = [...prev];
+                    next[index] = updatedDeployment;
+                    return next;
+                } else {
+                    return [...prev, updatedDeployment];
+                }
+            });
+
+            setLiveUsage(prev => ({
+                ...prev,
+                [data.deployment]: {
+                    cpu: data.validation?.metricsEvaluation?.find(m => m.metric === 'cpuPercent')?.value || 0,
+                    memory: data.validation?.metricsEvaluation?.find(m => m.metric === 'memPercent')?.value || 0
+                }
+            }));
+        });
+
+        return () => {
+            eventsStream.close();
+            statusStream.close();
+        };
     }, []);
 
     // Mock time-series data for graphs
-    const [cpuData, setCpuData] = useState([
-        { time: "5m", value: 45 },
-        { time: "4m", value: 52 },
-        { time: "3m", value: 68 },
-        { time: "2m", value: 75 },
-        { time: "1m", value: 72 },
-        { time: "now", value: 68 },
-    ]);
+    const [cpuData, setCpuData] = useState([]);
 
-    const [replicaData, setReplicaData] = useState([
-        { time: "30m", count: 20 },
-        { time: "25m", count: 22 },
-        { time: "20m", count: 25 },
-        { time: "15m", count: 28 },
-        { time: "10m", count: 26 },
-        { time: "5m", count: 28 },
-        { time: "now", count: 28 },
-    ]);
+    const [replicaData, setReplicaData] = useState([]);
 
     // Live deployment usage percentages
-    const [liveUsage, setLiveUsage] = useState(
-        deployments.reduce((acc, dep) => {
-            acc[dep.name] = {
-                cpu: dep.cpuUsage,
-                memory: dep.memoryUsage
-            };
-            return acc;
-        }, {})
-    );
+    const [liveUsage, setLiveUsage] = useState({});
 
     // Calculate summary statistics
     const totalDeployments = deployments.length;
     const totalReplicas = deployments.reduce((sum, d) => sum + d.currentReplicas, 0);
     const recentEvents = recentActivity.length;
-    const successRate = Math.round(
-        (recentActivity.filter((a) => a.decision === "SUCCESS").length / recentActivity.length) * 100
-    );
+    const successRate = recentActivity.length > 0
+        ? Math.round((recentActivity.filter((a) => a.decision === "SUCCESS" || a.decision === "SUCCESS_VALIDATED").length / recentActivity.length) * 100)
+        : 100;
 
     // Real-time clock update
     useEffect(() => {
@@ -79,60 +92,34 @@ const RealTimeScaling = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // Auto-update graph data every 3 seconds to show movement
+    // Track total replicas in the chart
     useEffect(() => {
-        const graphTimer = setInterval(() => {
-            // Update CPU data with random fluctuations
-            setCpuData(prevData => {
-                const newData = [...prevData];
-                newData.shift(); // Remove first item
-                const lastValue = newData[newData.length - 1].value;
-                const newValue = Math.max(40, Math.min(85, lastValue + (Math.random() - 0.5) * 10));
-                newData.push({ time: "now", value: Math.round(newValue) });
-                return newData;
+        const total = deployments.reduce((sum, d) => sum + (d.currentReplicas || 0), 0);
+        setReplicaData(prev => {
+            const newData = [...prev];
+            if (newData.length >= 20) newData.shift();
+            newData.push({
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                count: total
             });
+            return newData;
+        });
 
-            // Update Replica data with occasional changes
-            setReplicaData(prevData => {
-                const newData = [...prevData];
-                newData.shift(); // Remove first item
-                const lastValue = newData[newData.length - 1].count;
-                const change = Math.random() > 0.7 ? (Math.random() > 0.5 ? 1 : -1) : 0;
-                const newValue = Math.max(20, Math.min(32, lastValue + change));
-                newData.push({ time: "now", count: newValue });
-                return newData;
+        // Also update CPU chart with average if needed
+        const avgCpu = deployments.length > 0
+            ? Math.round(deployments.reduce((sum, d) => sum + (d.cpuUsage || 0), 0) / deployments.length)
+            : 0;
+
+        setCpuData(prev => {
+            const newData = [...prev];
+            if (newData.length >= 20) newData.shift();
+            newData.push({
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                value: avgCpu
             });
-        }, 3000); // Update every 3 seconds
-
-        return () => clearInterval(graphTimer);
-    }, []);
-
-    // Auto-update deployment usage percentages every 4 seconds
-    useEffect(() => {
-        const usageTimer = setInterval(() => {
-            setLiveUsage(prevUsage => {
-                const newUsage = { ...prevUsage };
-                Object.keys(newUsage).forEach(deploymentName => {
-                    // Small random fluctuations for CPU (±2-5%) with decimal precision
-                    const cpuChange = (Math.random() - 0.5) * 5;
-                    const newCpu = newUsage[deploymentName].cpu + cpuChange;
-                    newUsage[deploymentName].cpu = Math.max(30, Math.min(90,
-                        parseFloat(newCpu.toFixed(1))
-                    ));
-
-                    // Small random fluctuations for Memory (±1-3%) with decimal precision
-                    const memChange = (Math.random() - 0.5) * 3;
-                    const newMem = newUsage[deploymentName].memory + memChange;
-                    newUsage[deploymentName].memory = Math.max(40, Math.min(85,
-                        parseFloat(newMem.toFixed(1))
-                    ));
-                });
-                return newUsage;
-            });
-        }, 4000); // Update every 4 seconds
-
-        return () => clearInterval(usageTimer);
-    }, []);
+            return newData;
+        });
+    }, [deployments]);
 
     // Format timestamp
     const formatTime = (timestamp) => {
@@ -171,6 +158,7 @@ const RealTimeScaling = () => {
     const getDecisionBadge = (decision) => {
         const badges = {
             SUCCESS: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+            SUCCESS_VALIDATED: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
             FAILED: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
             ROLLED_BACK: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
         };
