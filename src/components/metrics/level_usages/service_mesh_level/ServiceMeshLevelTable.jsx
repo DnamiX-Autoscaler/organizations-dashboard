@@ -4,42 +4,64 @@ import Table from "../../../common/Table";
 const ServiceMeshLevelTable = ({ data }) => {
   const columns = [
     {
+      key: "service_name",
+      label: "Service Name",
+      bold: true,
+      icon: "mdi:vector-link",
+    },
+    {
+      key: "namespace",
+      label: "Namespace",
+      icon: "mdi:folder-network-outline",
+    },
+    {
+      key: "timestamp",
+      label: "Timestamp",
+      icon: "mdi:clock-outline",
+    },
+    {
       key: "inbound_request_rate_rps",
       label: "Inbound RPS",
-      bold: true,
-      icon: "fluent:leaf-two-24-regular",
+      icon: "mdi:arrow-down-circle-outline",
     },
     {
       key: "outbound_request_rate_rps",
       label: "Outbound RPS",
-      icon: "fluent:leaf-two-24-regular",
+      icon: "mdi:arrow-up-circle-outline",
     },
     {
       key: "mesh_latency_p95_ms",
       label: "Latency P95 (ms)",
-      icon: "fluent:leaf-two-24-regular",
+      icon: "mdi:timer-outline",
     },
     {
       key: "mesh_retry_rate_rps",
       label: "Retry Rate (RPS)",
-      icon: "fluent:leaf-two-24-regular",
+      icon: "mdi:refresh",
     },
     {
       key: "mesh_tcp_open_connections",
       label: "TCP Connections",
-      icon: "fluent:leaf-two-24-regular",
+      icon: "mdi:lan-connect",
     },
     {
       key: "mesh_tls_error_rate_percent",
       label: "TLS Error (%)",
-      icon: "fluent:leaf-two-24-regular",
+      icon: "mdi:shield-alert-outline",
     },
   ];
+
+  const tableData = data.map((item) => ({
+    ...item,
+    timestamp: item.timestamp
+      ? new Date(item.timestamp).toLocaleString()
+      : "-",
+  }));
 
   return (
     <Table
       columns={columns}
-      data={data}
+      data={tableData}
       empty="No service mesh data available"
     />
   );

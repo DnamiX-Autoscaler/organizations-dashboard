@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import TitleHeader from "../../../components/common/TitleHeader";
-import {
-  fetchRunningPods,
-  getReadyColor,
-  getPodStatistics,
-} from "../../../data/runningPods";
+import { getReadyColor, getPodStatistics } from "../../../data/runningPods";
+import runningPodsService from "../../../api/services/metrics/running_pods";
 import StatusBadge from "../../../components/metrics/running_pods/StatusBadge.jsx";
 import ReadyBadge from "../../../components/metrics/running_pods/ReadyBadge.jsx";
 import StatisticsCards from "../../../components/metrics/running_pods/StatisticsCards.jsx";
@@ -24,7 +21,7 @@ const RunningPods = () => {
   const loadPods = async () => {
     setLoading(true);
     try {
-      const data = await fetchRunningPods();
+      const data = await runningPodsService.getPods();
       setPods(data);
     } catch (error) {
       console.error("Failed to fetch pods:", error);
@@ -63,6 +60,7 @@ const RunningPods = () => {
   const statusFilterOptions = [
     { value: "all", label: "All Status" },
     { value: "running", label: "Running" },
+    { value: "failed", label: "Failed" },
     { value: "error", label: "Error" },
     { value: "crashloopbackoff", label: "CrashLoopBackOff" },
     { value: "pending", label: "Pending" },
@@ -101,11 +99,10 @@ const RunningPods = () => {
           {/* Auto-refresh toggle */}
           <button
             onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all ${
-              autoRefresh
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all ${autoRefresh
                 ? "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20"
                 : "text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800"
-            }`}
+              }`}
           >
             <Icon
               icon={autoRefresh ? "mdi:refresh" : "mdi:refresh-off"}
