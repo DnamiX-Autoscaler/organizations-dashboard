@@ -48,11 +48,11 @@ const LiveAlertSimulation = () => {
         // Initial delay
         const initialTimer = setTimeout(() => {
             triggerAlert();
-        }, 1000);
+        }, 2000);
 
         const interval = setInterval(() => {
             triggerAlert();
-        }, 6000); // Every 6 seconds
+        }, 10000); // Every 10 seconds
 
         return () => {
             clearTimeout(initialTimer);
