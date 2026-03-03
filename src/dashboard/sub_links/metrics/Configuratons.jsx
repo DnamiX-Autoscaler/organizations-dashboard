@@ -1,229 +1,235 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import TitleHeader from "../../../components/common/TitleHeader";
-import TabSection from "../../../components/common/TabSection";
-import Search from "../../../components/common/Search";
-import FilterDropdown from "../../../components/common/FilterDropdown";
-import ClearFilterButton from "../../../components/common/ClearFilterButton";
-import ConfigurationCard from "../../../components/metrics/configurations/ConfigurationCard";
-import ConfigurationStatistics from "../../../components/metrics/configurations/ConfigurationStatistics";
-import {
-  fetchConfigurations,
-  getConfigurationStatistics,
-} from "../../../data/configurations";
+import configurationsService from "../../../api/services/metrics/conigurations";
 
+// ── Section wrapper ──────────────────────────────────────────────
+const Section = ({ icon, iconColor, title, children }) => (
+  <div className="p-6 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
+    <div className="flex items-center gap-2 mb-4">
+      <Icon icon={icon} className={`w-5 h-5 ${iconColor}`} />
+      <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+        {title}
+      </h3>
+    </div>
+    {children}
+  </div>
+);
+
+// ── Key-value row ────────────────────────────────────────────────
+const KVRow = ({ label, value, mono }) => (
+  <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700/60 last:border-0">
+    <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>
+    <span
+      className={`text-sm font-medium text-gray-900 dark:text-white ${mono ? "font-mono" : ""}`}
+    >
+      {value ?? "-"}
+    </span>
+  </div>
+);
+
+// ── Mode badge ───────────────────────────────────────────────────
+const ModeBadge = ({ label, active }) => (
+  <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700/60 last:border-0">
+    <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${
+        active
+          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+          : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+      }`}
+    >
+      <span
+        className={`w-1.5 h-1.5 rounded-full ${active ? "bg-amber-500" : "bg-gray-400"}`}
+      />
+      {active ? "Enabled" : "Disabled"}
+    </span>
+  </div>
+);
+
+// ── Chip ─────────────────────────────────────────────────────────
+const Chip = ({ label, color }) => (
+  <span
+    className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${color}`}
+  >
+    {label}
+  </span>
+);
+
+// ─────────────────────────────────────────────────────────────────
 const Configuratons = () => {
-  const [activeLevel, setActiveLevel] = useState("node");
-  const [configurations, setConfigurations] = useState([]);
+  const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [error, setError] = useState(null);
+  const [lastFetched, setLastFetched] = useState(null);
 
-  const levels = [
-    { key: "node", label: "Node Level", icon: "mdi:server" },
-    { key: "pod", label: "Pod Level", icon: "mdi:cube-outline" },
-    { key: "app", label: "App Level", icon: "mdi:application" },
-    { key: "service", label: "Service Level", icon: "mdi:server-network" },
-  ];
-
-  // Fetch configurations
-  const loadConfigurations = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const data = await fetchConfigurations(activeLevel);
-      setConfigurations(data);
-    } catch (error) {
-      console.error("Failed to fetch configurations:", error);
+      const data = await configurationsService.getConfig();
+      setConfig(data);
+      setLastFetched(new Date());
+    } catch (err) {
+      setError(err?.message ?? "Failed to fetch configuration");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Load configurations on level change
   useEffect(() => {
-    loadConfigurations();
-  }, [activeLevel]);
-
-  // Auto-refresh
-  useEffect(() => {
-    if (autoRefresh) {
-      const interval = setInterval(() => {
-        loadConfigurations();
-      }, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [autoRefresh, activeLevel]);
-
-  // Filter configurations
-  const filteredConfigs = configurations.filter((config) => {
-    const matchesSearch = config.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      filterStatus === "all" || config.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  const stats = getConfigurationStatistics(configurations);
-
-  // Filter options
-  const statusFilterOptions = [
-    { value: "all", label: "All Status" },
-    { value: "active", label: "Active" },
-    { value: "inactive", label: "Inactive" },
-  ];
-
-  // Clear filters
-  const clearFilters = () => {
-    setSearchTerm("");
-    setFilterStatus("all");
-  };
-
-  const hasActiveFilters = searchTerm !== "" || filterStatus !== "all";
-
-  // Handle toggle configuration
-  const handleToggle = (id) => {
-    setConfigurations(
-      configurations.map((config) =>
-        config.id === id ? { ...config, enabled: !config.enabled } : config
-      )
-    );
-  };
-
-  // Handle edit configuration
-  const handleEdit = (config) => {
-    console.log("Edit configuration:", config);
-    // TODO: Open edit modal
-  };
+    load();
+  }, [load]);
 
   return (
     <div className="space-y-6">
-      <TitleHeader
-        title="Metrics Configuration"
-        subtitle="Configure metric collection at different levels: Node, Pod, App, and Service"
-      />
-
-      {/* Level Tabs */}
-      <TabSection
-        tabs={levels}
-        activeTab={activeLevel}
-        onTabChange={setActiveLevel}
-      />
-
-      {/* Statistics */}
-      <ConfigurationStatistics stats={stats} />
-
-      {/* Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Search */}
-          <Search
-            value={searchTerm}
-            onChange={setSearchTerm}
-            placeholder={`Search ${activeLevel} configurations...`}
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <TitleHeader
+          title="Runtime Configuration"
+          subtitle="Live settings fetched from the backend: Prometheus, collection targets, and test modes"
+        />
+        <button
+          onClick={load}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 mt-1 text-sm font-medium text-white transition-all rounded-lg shrink-0 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Icon
+            icon="mdi:refresh"
+            className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
           />
-
-          {/* Filter by status */}
-          <FilterDropdown
-            value={filterStatus}
-            onChange={setFilterStatus}
-            options={statusFilterOptions}
-            placeholder="Filter by status"
-          />
-
-          {/* Clear Filter Button */}
-          {hasActiveFilters && <ClearFilterButton onClick={clearFilters} />}
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Auto-refresh toggle */}
-          <button
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all ${
-              autoRefresh
-                ? "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20"
-                : "text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800"
-            }`}
-          >
-            <Icon
-              icon={autoRefresh ? "mdi:refresh" : "mdi:refresh-off"}
-              className={`w-4 h-4 ${autoRefresh ? "animate-spin" : ""}`}
-            />
-            {autoRefresh ? "Auto-refresh On" : "Auto-refresh Off"}
-          </button>
-
-          {/* Refresh button */}
-          <button
-            onClick={loadConfigurations}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-all rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Icon
-              icon="mdi:refresh"
-              className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </button>
-
-          {/* Add New Configuration */}
-          <button
-            onClick={() => console.log("Add new configuration")}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-all rounded-lg bg-primary hover:bg-primary/90"
-          >
-            <Icon icon="mdi:plus" className="w-4 h-4" />
-            Add Configuration
-          </button>
-        </div>
+          Refresh
+        </button>
       </div>
 
-      {/* Configurations List */}
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Icon
-            icon="mdi:loading"
-            className="w-8 h-8 text-primary animate-spin"
-          />
-        </div>
-      ) : filteredConfigs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
-          <Icon
-            icon="mdi:cog-off-outline"
-            className="w-16 h-16 text-gray-300 dark:text-gray-600"
-          />
-          <p className="mt-4 text-lg font-medium text-gray-600 dark:text-gray-400">
-            No configurations found
-          </p>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-500">
-            {hasActiveFilters
-              ? "Try adjusting your filters"
-              : `Add a new ${activeLevel} configuration to get started`}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {filteredConfigs.map((config) => (
-            <ConfigurationCard
-              key={config.id}
-              config={config}
-              level={activeLevel}
-              onEdit={handleEdit}
-              onToggle={handleToggle}
-            />
-          ))}
+      {/* Last fetched */}
+      {lastFetched && !loading && (
+        <div className="flex items-center gap-2 px-4 py-2 border border-green-200 rounded-lg bg-green-50 dark:bg-green-900/20 dark:border-green-800">
+          <div className="w-2 h-2 bg-green-500 rounded-full" />
+          <span className="text-sm text-green-700 dark:text-green-400">
+            Last fetched: {lastFetched.toLocaleString()}
+          </span>
         </div>
       )}
 
-      {/* Results count */}
-      {!loading && filteredConfigs.length > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700 dark:text-gray-400">
-          <span>
-            Showing {filteredConfigs.length} of {configurations.length}{" "}
-            configurations
+      {/* Loading */}
+      {loading && (
+        <div className="flex items-center justify-center py-20">
+          <Icon
+            icon="mdi:loading"
+            className="w-8 h-8 animate-spin text-primary"
+          />
+        </div>
+      )}
+
+      {/* Error */}
+      {!loading && error && (
+        <div className="flex items-center gap-3 p-4 border border-red-200 rounded-lg bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+          <Icon
+            icon="mdi:alert-circle"
+            className="w-5 h-5 text-red-500 shrink-0"
+          />
+          <span className="text-sm text-red-700 dark:text-red-400">
+            {error}
           </span>
-          <span className="text-xs font-medium text-primary">
-            Level: {activeLevel.toUpperCase()}
-          </span>
+        </div>
+      )}
+
+      {/* Config sections */}
+      {!loading && config && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Prometheus */}
+          <Section
+            icon="mdi:fire"
+            iconColor="text-orange-500"
+            title="Prometheus"
+          >
+            <KVRow label="URL" value={config.prometheus?.url} mono />
+            <KVRow
+              label="Scrape Interval"
+              value={
+                config.prometheus?.scrape_interval_seconds != null
+                  ? `${config.prometheus.scrape_interval_seconds}s`
+                  : "-"
+              }
+            />
+          </Section>
+
+          {/* Collection */}
+          <Section
+            icon="mdi:timer-outline"
+            iconColor="text-blue-500"
+            title="Collection Settings"
+          >
+            <KVRow
+              label="Collection Window"
+              value={
+                config.collection_window_seconds != null
+                  ? `${config.collection_window_seconds}s`
+                  : "-"
+              }
+            />
+          </Section>
+
+          {/* Targets — Namespaces */}
+          <Section
+            icon="mdi:folder-network-outline"
+            iconColor="text-violet-500"
+            title="Target Namespaces"
+          >
+            {config.targets?.namespaces?.length ? (
+              <div className="flex flex-wrap gap-2">
+                {config.targets.namespaces.map((ns) => (
+                  <Chip
+                    key={ns}
+                    label={ns}
+                    color="bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">No namespaces configured</p>
+            )}
+          </Section>
+
+          {/* Modes */}
+          <Section
+            icon="mdi:toggle-switch-outline"
+            iconColor="text-amber-500"
+            title="Test Modes"
+          >
+            <ModeBadge
+              label="Queue Test Mode"
+              active={config.modes?.queue_test_mode}
+            />
+            <ModeBadge
+              label="Error Test Mode"
+              active={config.modes?.error_test_mode}
+            />
+          </Section>
+
+          {/* Targets — Services (full width) */}
+          <div className="lg:col-span-2">
+            <Section
+              icon="mdi:server-network"
+              iconColor="text-emerald-500"
+              title={`Target Services (${config.targets?.services?.length ?? 0})`}
+            >
+              {config.targets?.services?.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {config.targets.services.map((svc) => (
+                    <Chip
+                      key={svc}
+                      label={svc}
+                      color="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400">No services configured</p>
+              )}
+            </Section>
+          </div>
         </div>
       )}
     </div>

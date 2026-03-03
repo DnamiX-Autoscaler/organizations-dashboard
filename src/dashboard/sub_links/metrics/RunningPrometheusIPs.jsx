@@ -2,10 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import TitleHeader from "../../../components/common/TitleHeader";
 import {
-    fetchPrometheusServices,
     getPrometheusStatistics,
     getServiceCategory,
 } from "../../../data/runningPrometheusIPs";
+import runningMonitoringServicesService from "../../../api/services/metrics/running_monitoring_services";
 import PrometheusStatisticsCards from "../../../components/metrics/prometheus_ips/PrometheusStatisticsCards.jsx";
 import Search from "../../../components/common/Search.jsx";
 import FilterDropdown from "../../../components/common/FilterDropdown.jsx";
@@ -23,10 +23,10 @@ const RunningPrometheusIPs = () => {
     const loadServices = async () => {
         setLoading(true);
         try {
-            const data = await fetchPrometheusServices();
+            const data = await runningMonitoringServicesService.getServices();
             setServices(data);
         } catch (error) {
-            console.error("Failed to fetch Prometheus services:", error);
+            console.error("Failed to fetch monitoring services:", error);
         } finally {
             setLoading(false);
         }
@@ -116,8 +116,8 @@ const RunningPrometheusIPs = () => {
                     <button
                         onClick={() => setAutoRefresh(!autoRefresh)}
                         className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all ${autoRefresh
-                                ? "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20"
-                                : "text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800"
+                            ? "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20"
+                            : "text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800"
                             }`}
                     >
                         <Icon
