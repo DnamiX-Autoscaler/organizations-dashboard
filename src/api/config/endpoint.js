@@ -39,7 +39,7 @@ const ENDPOINTS = {
         STREAM: "/metrics/live-stream",
     },
     TIMESERIES: {
-        STREAM: "/timeseries/monthly/live-stream",
+        DATE_RANGE: "/timeseries/date-range",
     },
 };
 

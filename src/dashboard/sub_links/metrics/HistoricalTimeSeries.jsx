@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useMemo,
-  useCallback,
-} from "react";
+import React, { useState, useRef, useMemo, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import TitleHeader from "../../../components/common/TitleHeader";
 import historicalTimeSeriesService from "../../../api/services/metrics/historical_time_series_metrics";
@@ -117,15 +111,17 @@ const downloadCSV = (data, filename) => {
 
 // ── Component ────────────────────────────────────────────────────────
 const HistoricalTimeSeries = () => {
-  // SSE connection state
+  // Query parameters
+  const [lookbackDays, setLookbackDays] = useState(7);
+  const [stepSeconds, setStepSeconds] = useState(3600);
+
+  // Fetch state
   const [services, setServices] = useState({});
   const [queryRange, setQueryRange] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dataReceived, setDataReceived] = useState(false);
   const abortControllerRef = useRef(null);
-  const retryCountRef = useRef(0);
-  const MAX_RETRIES = 5;
 
   // UI state
   const [selectedService, setSelectedService] = useState(null);
@@ -134,126 +130,74 @@ const HistoricalTimeSeries = () => {
   const [chartType, setChartType] = useState("line");
   const [activeMetricGroup, setActiveMetricGroup] = useState("Application");
 
-  // ── SSE Connection ───────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
+  // ── Fetch data ───────────────────────────────────────────────────
+  const handleStartCollect = useCallback(async () => {
+    // Abort any previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
 
-    const connectSSE = async () => {
-      if (cancelled || retryCountRef.current >= MAX_RETRIES) return;
-      setError(null);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
+    setIsLoading(true);
+    setError(null);
+    setDataReceived(false);
+    setServices({});
+    setQueryRange(null);
+    setSelectedService(null);
 
-      await historicalTimeSeriesService.connectStream({
+    try {
+      const data = await historicalTimeSeriesService.fetchDateRange({
+        lookbackDays,
+        stepSeconds,
         signal: controller.signal,
-
-        onOpen: () => {
-          if (!cancelled) {
-            setIsConnected(true);
-            setError(null);
-            retryCountRef.current = 0;
-          }
-        },
-
-        onMessage: (data) => {
-          if (cancelled) return;
-          setIsConnected(true);
-          setError(null);
-          setDataReceived(true);
-
-          if (data.query_range) {
-            setQueryRange(data.query_range);
-          }
-
-          if (data.services) {
-            setServices((prev) => {
-              const merged = { ...prev };
-              for (const [key, svc] of Object.entries(data.services)) {
-                if (merged[key]) {
-                  // Merge new data points, avoiding duplicates by timestamp
-                  const existingTs = new Set(
-                    merged[key].data.map((d) => d.timestamp),
-                  );
-                  const newPoints = svc.data.filter(
-                    (d) => !existingTs.has(d.timestamp),
-                  );
-                  merged[key] = {
-                    ...svc,
-                    data: [...merged[key].data, ...newPoints],
-                    data_points: merged[key].data.length + newPoints.length,
-                  };
-                } else {
-                  merged[key] = svc;
-                }
-              }
-              return merged;
-            });
-          }
-        },
-
-        onError: (err) => {
-          if (cancelled) return;
-          console.error("Time-series SSE error:", err);
-          setIsConnected(false);
-          setError("Connection lost. Reconnecting...");
-
-          retryCountRef.current += 1;
-          if (retryCountRef.current < MAX_RETRIES) {
-            setTimeout(() => {
-              if (!cancelled) connectSSE();
-            }, 3000);
-          } else {
-            setError("Max retry attempts reached. Please refresh the page.");
-          }
-        },
       });
 
-      // Stream ended naturally — reconnect
-      if (!cancelled) {
-        setIsConnected(false);
-        setTimeout(() => {
-          if (!cancelled) connectSSE();
-        }, 1000);
+      if (data.query_range) {
+        setQueryRange(data.query_range);
       }
-    };
 
-    connectSSE();
+      if (data.services) {
+        setServices(data.services);
 
-    return () => {
-      cancelled = true;
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
+        // Auto-select first service with data
+        const entries = Object.entries(data.services);
+        const withData = entries.find(
+          ([, points]) => Array.isArray(points) && points.length > 0,
+        );
+        if (withData) setSelectedService(withData[0]);
+        else if (entries.length > 0) setSelectedService(entries[0][0]);
       }
-    };
-  }, []);
 
-  // Auto-select first service with data when services arrive
-  useEffect(() => {
-    if (!selectedService && Object.keys(services).length > 0) {
-      const withData = Object.entries(services).find(
-        ([, s]) => s.data_points > 0,
-      );
-      if (withData) setSelectedService(withData[0]);
-      else setSelectedService(Object.keys(services)[0]);
+      setDataReceived(true);
+    } catch (err) {
+      if (err.name === "AbortError") return;
+      console.error("Time-series fetch error:", err);
+      setError(err.message || "Failed to fetch time-series data.");
+    } finally {
+      setIsLoading(false);
     }
-  }, [services, selectedService]);
+  }, [lookbackDays, stepSeconds]);
 
   // ── Derived data ─────────────────────────────────────────────────
   const currentServiceData = useMemo(() => {
     if (!selectedService || !services[selectedService]) return [];
-    return services[selectedService].data || [];
+    const data = services[selectedService];
+    return Array.isArray(data) ? data : [];
   }, [services, selectedService]);
 
   const currentServiceName = useMemo(() => {
-    if (!selectedService || !services[selectedService]) return "";
-    return services[selectedService].service_name || selectedService;
-  }, [services, selectedService]);
+    if (!selectedService) return "";
+    if (currentServiceData.length > 0 && currentServiceData[0].service_name) {
+      return currentServiceData[0].service_name;
+    }
+    return selectedService.split("/").pop();
+  }, [selectedService, currentServiceData]);
 
   const totalDataPoints = useMemo(() => {
     return Object.values(services).reduce(
-      (sum, s) => sum + (s.data_points || 0),
+      (sum, points) => sum + (Array.isArray(points) ? points.length : 0),
       0,
     );
   }, [services]);
@@ -297,78 +241,133 @@ const HistoricalTimeSeries = () => {
       {/* Header */}
       <TitleHeader
         title="Historical Time Series"
-        subtitle="Monthly Prometheus metrics streamed in real-time via SSE"
+        subtitle="Fetch Prometheus metrics for a custom date range"
       />
 
-      {/* Status Bar */}
-      <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
-        {/* Connection indicator */}
-        <div className="flex items-center gap-2">
-          <span
-            className={`w-2 h-2 rounded-full ${
-              isConnected
-                ? "bg-green-500 animate-pulse"
-                : error
-                  ? "bg-red-500"
-                  : "bg-yellow-500 animate-pulse"
-            }`}
-          />
-          <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
-            {isConnected ? "Connected" : error ? "Error" : "Connecting…"}
-          </span>
-        </div>
+      {/* Query Parameters Card */}
+      <div className="p-4 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
+        <p className="mb-4 text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
+          Query Parameters
+        </p>
+        <div className="flex flex-wrap items-end gap-4">
+          {/* Lookback Days */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-400">
+              Lookback Days
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={90}
+              value={lookbackDays}
+              onChange={(e) =>
+                setLookbackDays(Math.max(0, parseInt(e.target.value) || 0))
+              }
+              className="w-32 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none bg-gray-50 dark:bg-darkBackgroundVery dark:border-gray-600 dark:text-white focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+            />
+          </div>
 
-        <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+          {/* Step Seconds */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-400">
+              Step Seconds
+            </label>
+            <input
+              type="number"
+              min={60}
+              max={86400}
+              value={stepSeconds}
+              onChange={(e) =>
+                setStepSeconds(Math.max(0, parseInt(e.target.value) || 0))
+              }
+              className="w-32 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none bg-gray-50 dark:bg-darkBackgroundVery dark:border-gray-600 dark:text-white focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+            />
+          </div>
 
-        {/* Services count */}
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-          <Icon icon="mdi:cube-outline" className="w-3.5 h-3.5" />
-          <span>{totalServices} services</span>
-        </div>
-
-        <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
-
-        {/* Data points */}
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-          <Icon icon="mdi:database-outline" className="w-3.5 h-3.5" />
-          <span>{totalDataPoints.toLocaleString()} data points</span>
-        </div>
-
-        {queryRange && (
-          <>
-            <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
-            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-              <Icon icon="mdi:calendar-range" className="w-3.5 h-3.5" />
-              <span>{formatRange(queryRange)}</span>
-            </div>
-            <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
-            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-              <Icon icon="mdi:clock-outline" className="w-3.5 h-3.5" />
-              <span>Step: {queryRange.step_seconds}s</span>
-            </div>
-          </>
-        )}
-
-        {/* Export buttons - right aligned */}
-        <div className="flex items-center gap-2 ml-auto">
+          {/* Start Collect Button */}
           <button
-            onClick={() => handleExport("csv")}
-            disabled={currentServiceData.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-darkBackgroundVery border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            onClick={handleStartCollect}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white transition-all bg-indigo-600 rounded-lg shadow-sm hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Icon icon="mdi:file-delimited-outline" className="w-3.5 h-3.5" />
-            CSV
-          </button>
-          <button
-            onClick={() => handleExport("json")}
-            disabled={currentServiceData.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-darkBackgroundVery border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            <Icon icon="mdi:code-json" className="w-3.5 h-3.5" />
-            JSON
+            {isLoading ? (
+              <>
+                <div className="w-4 h-4 border-2 rounded-full border-white/30 border-t-white animate-spin" />
+                Collecting…
+              </>
+            ) : (
+              <>
+                <Icon icon="mdi:play-circle-outline" className="w-4.5 h-4.5" />
+                Start Collect
+              </>
+            )}
           </button>
         </div>
       </div>
+
+      {/* Status Bar — shown after data arrives */}
+      {dataReceived && (
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
+          {/* Collected indicator */}
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-green-500 rounded-full" />
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+              Collected
+            </span>
+          </div>
+
+          <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+
+          {/* Services count */}
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+            <Icon icon="mdi:cube-outline" className="w-3.5 h-3.5" />
+            <span>{totalServices} services</span>
+          </div>
+
+          <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+
+          {/* Data points */}
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+            <Icon icon="mdi:database-outline" className="w-3.5 h-3.5" />
+            <span>{totalDataPoints.toLocaleString()} data points</span>
+          </div>
+
+          {queryRange && (
+            <>
+              <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <Icon icon="mdi:calendar-range" className="w-3.5 h-3.5" />
+                <span>{formatRange(queryRange)}</span>
+              </div>
+              <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <Icon icon="mdi:clock-outline" className="w-3.5 h-3.5" />
+                <span>Step: {queryRange.step_seconds}s</span>
+              </div>
+            </>
+          )}
+
+          {/* Export buttons - right aligned */}
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              onClick={() => handleExport("csv")}
+              disabled={currentServiceData.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-darkBackgroundVery border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <Icon icon="mdi:file-delimited-outline" className="w-3.5 h-3.5" />
+              CSV
+            </button>
+            <button
+              onClick={() => handleExport("json")}
+              disabled={currentServiceData.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-darkBackgroundVery border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <Icon icon="mdi:code-json" className="w-3.5 h-3.5" />
+              JSON
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Error banner */}
       {error && (
@@ -382,20 +381,36 @@ const HistoricalTimeSeries = () => {
       )}
 
       {/* Loading state */}
-      {!dataReceived && !error && (
+      {isLoading && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-10 h-10 mb-4 border-4 border-indigo-200 rounded-full border-t-indigo-600 animate-spin" />
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Streaming historical time-series data…
+            Collecting historical time-series data…
           </p>
           <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-            Connecting to SSE endpoint
+            Lookback: {lookbackDays} days · Step: {stepSeconds}s
+          </p>
+        </div>
+      )}
+
+      {/* Empty state — before first collect */}
+      {!dataReceived && !isLoading && !error && (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <Icon
+            icon="mdi:chart-timeline-variant-shimmer"
+            className="w-12 h-12 mb-4 text-gray-300 dark:text-gray-600"
+          />
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            Configure parameters and click Start Collect
+          </p>
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            Set lookback days &amp; step seconds, then fetch your metrics
           </p>
         </div>
       )}
 
       {/* Main content - shown after data arrives */}
-      {dataReceived && (
+      {dataReceived && !isLoading && (
         <>
           {/* Service Selector */}
           <ServiceSelector
@@ -478,7 +493,6 @@ const HistoricalTimeSeries = () => {
           <TimeSeriesStatsCards
             data={currentServiceData}
             selectedMetrics={selectedMetrics}
-            queryRange={queryRange}
           />
 
           {/* Tabs */}
@@ -521,7 +535,6 @@ const HistoricalTimeSeries = () => {
               services={services}
               queryRange={queryRange}
               totalDataPoints={totalDataPoints}
-              isConnected={isConnected}
             />
           )}
         </>
@@ -531,12 +544,7 @@ const HistoricalTimeSeries = () => {
 };
 
 // ── Overview Panel ───────────────────────────────────────────────────
-const OverviewPanel = ({
-  services,
-  queryRange,
-  totalDataPoints,
-  isConnected,
-}) => {
+const OverviewPanel = ({ services, queryRange, totalDataPoints }) => {
   const serviceEntries = Object.entries(services);
 
   return (
@@ -562,10 +570,10 @@ const OverviewPanel = ({
           color="amber"
         />
         <OverviewCard
-          icon="mdi:connection"
-          label="Stream Status"
-          value={isConnected ? "Connected" : "Disconnected"}
-          color={isConnected ? "green" : "red"}
+          icon="mdi:calendar-range"
+          label="Lookback"
+          value={queryRange ? `${queryRange.lookback_days} days` : "—"}
+          color="green"
         />
       </div>
 
@@ -597,24 +605,28 @@ const OverviewPanel = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {serviceEntries.map(([key, svc]) => {
-                const first = svc.data?.[0]?.timestamp;
-                const last = svc.data?.[svc.data.length - 1]?.timestamp;
+              {serviceEntries.map(([key, dataPoints]) => {
+                const points = Array.isArray(dataPoints) ? dataPoints : [];
+                const first = points[0]?.timestamp;
+                const last = points[points.length - 1]?.timestamp;
+                const serviceName =
+                  points[0]?.service_name || key.split("/").pop();
+                const namespace = points[0]?.namespace || key.split("/")[0];
                 return (
                   <tr
                     key={key}
                     className="transition-colors hover:bg-gray-50 dark:hover:bg-darkBackgroundVery"
                   >
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                      {svc.service_name}
+                      {serviceName}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       <span className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 rounded">
-                        {svc.namespace}
+                        {namespace}
                       </span>
                     </td>
                     <td className="px-4 py-3 font-mono text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                      {svc.data_points?.toLocaleString()}
+                      {points.length.toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       {first ? new Date(first).toLocaleString() : "—"}
