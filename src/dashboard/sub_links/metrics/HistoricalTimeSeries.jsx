@@ -525,6 +525,7 @@ const HistoricalTimeSeries = () => {
 
           {activeTab === "table" && (
             <TimeSeriesTable
+              key={selectedService}
               data={currentServiceData}
               serviceName={currentServiceName}
             />

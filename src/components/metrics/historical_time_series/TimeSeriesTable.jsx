@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Icon } from "@iconify/react";
 
+const PAGE_SIZE_OPTIONS = [15, 25, 50, 100];
+
 const formatTimestamp = (ts) => {
   if (!ts) return "—";
   return new Date(ts).toLocaleString();
@@ -8,7 +10,7 @@ const formatTimestamp = (ts) => {
 
 const TimeSeriesTable = ({ data, serviceName }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [recordsPerPage] = useState(15);
+  const [recordsPerPage, setRecordsPerPage] = useState(25);
 
   if (!data || data.length === 0) {
     return (
@@ -27,7 +29,9 @@ const TimeSeriesTable = ({ data, serviceName }) => {
   // Show newest first
   const sortedData = [...data].reverse();
   const totalPages = Math.max(1, Math.ceil(sortedData.length / recordsPerPage));
-  const startIdx = (currentPage - 1) * recordsPerPage;
+  // Clamp page to valid range (handles service switch or page-size change)
+  const safePage = Math.min(currentPage, totalPages);
+  const startIdx = (safePage - 1) * recordsPerPage;
   const pageRecords = sortedData.slice(startIdx, startIdx + recordsPerPage);
 
   // Exclude time encoding columns for cleaner display
@@ -50,7 +54,22 @@ const TimeSeriesTable = ({ data, serviceName }) => {
           {serviceName} — {data.length.toLocaleString()} data points (newest
           first)
         </div>
-        <span className="font-mono text-xs">Step: 5 min intervals</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-normal text-indigo-600 dark:text-indigo-400">
+            Rows per page:
+          </span>
+          <select
+            value={recordsPerPage}
+            onChange={(e) => setRecordsPerPage(Number(e.target.value))}
+            className="px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-white dark:bg-darkBackgroundVery border border-indigo-200 dark:border-indigo-700 rounded cursor-pointer outline-none"
+          >
+            {PAGE_SIZE_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Table */}
@@ -105,38 +124,48 @@ const TimeSeriesTable = ({ data, serviceName }) => {
       {/* Pagination */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg dark:bg-darkBackground dark:border-gray-700">
         <div className="text-sm text-gray-600 dark:text-gray-400">
-          Showing {startIdx + 1} to{" "}
-          {Math.min(startIdx + recordsPerPage, sortedData.length)} of{" "}
-          {sortedData.length} records
+          Showing{" "}
+          <span className="font-medium text-gray-800 dark:text-gray-200">
+            {startIdx + 1}
+          </span>{" "}
+          –{" "}
+          <span className="font-medium text-gray-800 dark:text-gray-200">
+            {Math.min(startIdx + recordsPerPage, sortedData.length)}
+          </span>{" "}
+          of{" "}
+          <span className="font-medium text-gray-800 dark:text-gray-200">
+            {sortedData.length.toLocaleString()}
+          </span>{" "}
+          records
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setCurrentPage(1)}
-            disabled={currentPage === 1}
+            disabled={safePage === 1}
             className="px-2 py-1 text-xs text-gray-600 border border-gray-200 rounded dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-300"
           >
             First
           </button>
           <button
             onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-            disabled={currentPage === 1}
+            disabled={safePage === 1}
             className="px-3 py-1 text-sm text-gray-600 border border-gray-200 rounded dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-300"
           >
             Previous
           </button>
           <span className="px-3 py-1 text-sm text-gray-700 dark:text-white">
-            Page {currentPage} of {totalPages}
+            Page {safePage} of {totalPages}
           </span>
           <button
             onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-            disabled={currentPage === totalPages}
+            disabled={safePage === totalPages}
             className="px-3 py-1 text-sm text-gray-600 border border-gray-200 rounded dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-300"
           >
             Next
           </button>
           <button
             onClick={() => setCurrentPage(totalPages)}
-            disabled={currentPage === totalPages}
+            disabled={safePage === totalPages}
             className="px-2 py-1 text-xs text-gray-600 border border-gray-200 rounded dark:border-gray-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-300"
           >
             Last
