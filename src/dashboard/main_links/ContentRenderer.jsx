@@ -32,7 +32,12 @@ import DeploymentHealth from "../sub_links/scaling/DeploymentHealth";
 
 //mlmodel sub-components
 import MLModelLogs from "../sub_links/mlmodel/MLModelLogs";
-import MLModelDashboard from "../sub_links/mlmodel/MLModelDashboard";
+import MLModelOverview from "../sub_links/mlmodel/MLModelOverview";
+import MLModelPredictionLab from "../sub_links/mlmodel/MLModelPredictionLab";
+import MLModelCostSavings from "../sub_links/mlmodel/MLModelCostSavings";
+import MLModelResourceMonitor from "../sub_links/mlmodel/MLModelResourceMonitor";
+import MLModelAlerts from "../sub_links/mlmodel/MLModelAlerts";
+import { MLModelProvider } from "../../services/MLModelContext";
 
 
 
@@ -74,9 +79,12 @@ const ContentRenderer = () => {
       // Add more scaling sub-components here...
     },
     mlmodel: {
-      // Add mlmodel sub-components here...
-      ["ml-ops-overview"]: <MLModelDashboard/>,
-      logs: <MLModelLogs/>,
+      ["ml-ops-overview"]: <MLModelOverview />,
+      ["prediction-lab"]: <MLModelPredictionLab />,
+      ["cost-savings"]: <MLModelCostSavings />,
+      ["resource-monitor"]: <MLModelResourceMonitor />,
+      ["ml-alerts"]: <MLModelAlerts />,
+      logs: <MLModelLogs />,
     },
     projects: {
       // Add project sub-components here...
@@ -100,6 +108,10 @@ const ContentRenderer = () => {
         </div>
       </div>
     );
+  }
+
+  if (activeMain === "mlmodel") {
+    return <MLModelProvider>{ComponentToRender}</MLModelProvider>;
   }
 
   return ComponentToRender;

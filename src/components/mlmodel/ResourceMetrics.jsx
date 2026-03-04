@@ -14,9 +14,9 @@ const ResourceMetrics = ({ data }) => {
     const [activeMetric, setActiveMetric] = useState("cpu");
 
     const metrics = {
-        cpu: { label: "CPU Usage %", color: "#3b82f6", icon: "mdi:cpu-64-bit" },
-        memory: { label: "Memory Usage %", color: "#f59e0b", icon: "mdi:memory" },
-        network: { label: "Network I/O (Mbps)", color: "#ec4899", icon: "mdi:ethernet" },
+        cpu: { label: "CPU Usage (%)", color: "#3b82f6", icon: "mdi:cpu-64-bit" },
+        memory: { label: "Memory Usage (MB)", color: "#f59e0b", icon: "mdi:memory" },
+        network: { label: "Inbound RPS (mesh)", color: "#ec4899", icon: "mdi:transit-connection-variant" },
     };
 
     const currentMetric = metrics[activeMetric];
