@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "https://mlapi-b3h4fpduauancfcg.southeastasia-01.azurewebsites.net";
 
 // Check API health
 export const checkApiHealth = async () => {

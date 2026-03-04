@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "target": "ES2022",
+    "checkJs": true,
+    "allowSyntheticDefaultImports": true,
+    "types": ["node"],
+    "noImplicitAny": false,
+    "strictNullChecks": false
+  },
+  "include": ["./**/*.js"],
+  "exclude": ["node_modules"]
+}

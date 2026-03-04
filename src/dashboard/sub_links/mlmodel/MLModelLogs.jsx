@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import TitleHeader from "../../../components/common/TitleHeader";
 import { fetchSimulationData, checkApiHealth, predictPodScaling } from "../../../services/mlModelService";
+import { loadLogs, saveLog, clearLogs } from "../../../services/dbService";
 import { Icon } from "@iconify/react";
 
 // Feature keys matching backend
@@ -24,12 +25,21 @@ const MLModelLogs = () => {
     const logContainerRef = useRef(null);
     const simIndexRef = useRef(48);
 
+    // Load persisted logs on mount
+    useEffect(() => {
+        loadLogs().then(saved => {
+            if (saved && saved.length > 0) setLogs(saved);
+        });
+    }, []);
+
     // Add log entry
     const addLog = (level, message, details = null) => {
         const timestamp = new Date().toLocaleTimeString("en-US", {
             hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
         });
-        setLogs(prev => [...prev.slice(-500), { timestamp, level, message, details }]);
+        const entry = { timestamp, level, message, details };
+        setLogs(prev => [...prev.slice(-500), entry]);
+        saveLog(entry);
     };
 
     // Auto-scroll
@@ -133,7 +143,7 @@ const MLModelLogs = () => {
                 // Validation
                 const error = predicted - actualAtT5;
                 if (Math.abs(error) <= 1) {
-                    addLog('VALIDATE', `✅ Prediction validated: predicted=${predicted}, actual@T+5=${actualAtT5}`, {
+                    addLog('VALIDATE', ` Prediction validated: predicted=${predicted}, actual@T+5=${actualAtT5}`, {
                         error: error
                     });
                 } else if (error > 1) {
@@ -236,7 +246,7 @@ const MLModelLogs = () => {
 
                     {/* Clear */}
                     <button
-                        onClick={() => setLogs([])}
+                        onClick={() => { setLogs([]); clearLogs(); }}
                         className="px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
                     >
                         Clear

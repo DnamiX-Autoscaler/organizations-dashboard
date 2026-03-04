@@ -13,6 +13,7 @@ import {
     getProvisioningEfficiencyData,
 } from "../../../components/mlmodel/DataGenerator";
 import { fetchSimulationData, checkApiHealth, predictPodScaling } from "../../../services/mlModelService";
+import { loadPredictions, savePrediction, clearPredictions, loadModelMetrics, saveModelMetrics } from "../../../services/dbService";
 import { Icon } from "@iconify/react";
 
 // Feature keys matching backend FEATURE_COLS order exactly
@@ -48,6 +49,28 @@ const MLModelDashboard = () => {
     const provisioningStats = useRef({ under: 0, exact: 0, over: 0, total: 0 });
     const errorHistory = useRef([]);
 
+    // Load persisted data on mount
+    useEffect(() => {
+        loadPredictions().then(saved => {
+            if (saved && saved.length > 0) {
+                setPredictionLog(saved);
+                const errors = saved.map(p => p.error);
+                errorHistory.current = errors;
+                const stats = { under: 0, exact: 0, over: 0, total: saved.length };
+                saved.forEach(p => {
+                    if (p.error < -1) stats.under++;
+                    else if (p.error > 1) stats.over++;
+                    else stats.exact++;
+                });
+                provisioningStats.current = stats;
+                calculateMetrics(errors, stats);
+            }
+        });
+        loadModelMetrics().then(saved => {
+            if (saved && saved.totalPredictions > 0) setModelMetrics(saved);
+        });
+    }, []);
+
     const formatTime = (timestamp) => {
         return new Date(timestamp).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
     };
@@ -63,10 +86,12 @@ const MLModelDashboard = () => {
         const accuracy = (exactMatches / n) * 100;
         const within1 = errors.filter(e => Math.abs(e) <= 1).length;
         const accuracyWithin1 = (within1 / n) * 100;
-        setModelMetrics({
+        const updated = {
             mae, rmse, accuracy, accuracyWithin1, totalPredictions: n,
             underCount: stats.under, exactCount: stats.exact, overCount: stats.over
-        });
+        };
+        setModelMetrics(updated);
+        saveModelMetrics(updated);
     };
 
     const initializeChartsFromData = (dataSlice) => {
@@ -114,6 +139,7 @@ const MLModelDashboard = () => {
                 provisioningStats.current = { under: 0, exact: 0, over: 0, total: 0 };
                 errorHistory.current = [];
                 setPredictionLog([]);
+                clearPredictions();
                 return;
             }
 
@@ -158,10 +184,12 @@ const MLModelDashboard = () => {
             else stats.exact += 1;
 
             errorHistory.current.push(predictionError);
-            setPredictionLog(prev => [...prev, {
+            const newEntry = {
                 time: timeStr, currentPods: actualPods, predicted: predictedPodsAtT5,
                 actualAtT5: actualPodsAtT5, error: predictionError
-            }]);
+            };
+            setPredictionLog(prev => [...prev, newEntry]);
+            savePrediction(newEntry);
             calculateMetrics(errorHistory.current, stats);
 
             const total = stats.total || 1;
