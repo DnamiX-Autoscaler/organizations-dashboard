@@ -27,6 +27,105 @@ const FEATURE_KEYS = [
 
 const SIMULATION_INTERVAL_MS = 2000;
 
+// ---------------------------------------------------------------------------
+// Spike row generator
+// Builds synthetic CSV-compatible rows spliced into simulationQueue so the
+// real ML API receives them as genuine input — not just CSV replay.
+// ---------------------------------------------------------------------------
+const generateSpikeRows = (type, baseRow) => {
+    const now = Date.now();
+    const base = {
+        rps: parseFloat(baseRow?.request_rate_rps || 800),
+        lat95: parseFloat(baseRow?.latency_p95_ms || 30),
+        lat99: parseFloat(baseRow?.latency_p99_ms || 50),
+        errRate: parseFloat(baseRow?.error_rate_percent || 0.1),
+        queue: parseFloat(baseRow?.queue_length || 10),
+        cpuAvg: parseFloat(baseRow?.pod_cpu_usage_percent_avg || 40),
+        cpuP95: parseFloat(baseRow?.pod_cpu_usage_percent_p95 || 55),
+        memAvg: parseFloat(baseRow?.pod_memory_usage_mb_avg || 300),
+        memP95: parseFloat(baseRow?.pod_memory_usage_mb_p95 || 450),
+        hSin: parseFloat(baseRow?.hour_sin || 0),
+        hCos: parseFloat(baseRow?.hour_cos || 1),
+        dSin: parseFloat(baseRow?.day_sin || 0),
+        dCos: parseFloat(baseRow?.day_cos || 1),
+        meshRps: parseFloat(baseRow?.mesh_inbound_rps || 300),
+        meshLat: parseFloat(baseRow?.mesh_inbound_latency_p95 || 12),
+        meshErr: parseFloat(baseRow?.mesh_inbound_error_rate || 0),
+        degC: parseFloat(baseRow?.degree_centrality || 0.5),
+        eigC: parseFloat(baseRow?.eigenvector_centrality || 0.4),
+        betC: parseFloat(baseRow?.betweenness_centrality || 0.3),
+        cloC: parseFloat(baseRow?.closeness_centrality || 0.6),
+        pods: parseInt(baseRow?.current_pod_count || 8),
+    };
+
+    const noise = (pct = 0.05) => 1 + (Math.random() - 0.5) * pct * 2;
+
+    const makeRow = (mult, ts) => ({
+        timestamp: new Date(ts).toISOString(),
+        request_rate_rps: (base.rps * mult.rps * noise()).toFixed(2),
+        latency_p95_ms: (base.lat95 * mult.lat * noise()).toFixed(2),
+        latency_p99_ms: (base.lat99 * mult.lat * 1.3 * noise()).toFixed(2),
+        error_rate_percent: (base.errRate * mult.err * noise(0.2)).toFixed(3),
+        queue_length: Math.round(base.queue * mult.rps * noise()),
+        pod_cpu_usage_percent_avg: Math.min(98, base.cpuAvg * mult.cpu * noise()).toFixed(1),
+        pod_cpu_usage_percent_p95: Math.min(99, base.cpuP95 * mult.cpu * 1.1 * noise()).toFixed(1),
+        pod_memory_usage_mb_avg: (base.memAvg * mult.mem * noise()).toFixed(1),
+        pod_memory_usage_mb_p95: (base.memP95 * mult.mem * 1.1 * noise()).toFixed(1),
+        hour_sin: base.hSin, hour_cos: base.hCos, day_sin: base.dSin, day_cos: base.dCos,
+        mesh_inbound_rps: (base.meshRps * mult.rps * noise()).toFixed(2),
+        mesh_inbound_latency_p95: (base.meshLat * mult.lat * noise()).toFixed(2),
+        mesh_inbound_error_rate: (base.meshErr + mult.err * 0.5 * noise(0.3)).toFixed(3),
+        degree_centrality: base.degC, eigenvector_centrality: base.eigC,
+        betweenness_centrality: base.betC, closeness_centrality: base.cloC,
+        current_pod_count: Math.max(1, Math.round(base.pods * mult.pods)),
+        _isSpike: true,
+        _spikeType: type,
+    });
+
+    const rows = [];
+
+    if (type === "flash_sale") {
+        // 5 ramp-up + 10 peak + 5 ramp-down
+        for (let i = 0; i < 20; i++) {
+            const t = now + i * 5 * 60000;
+            let f;
+            if (i < 5) f = 1 + (i / 5) * 3; // 1→4
+            else if (i < 15) f = 4 + Math.random() * 0.5; // peak 4-4.5
+            else f = 4 - ((i - 15) / 5) * 3; // 4→1
+            rows.push(makeRow({ rps: f, lat: 1 + f * 0.4, err: 1 + f * 0.05, cpu: 1 + f * 0.3, mem: 1 + f * 0.2, pods: Math.max(1, f * 0.9) }, t));
+        }
+    } else if (type === "ddos_burst") {
+        // 3 sudden extreme + 5 partial mitigation + 7 recovery
+        for (let i = 0; i < 15; i++) {
+            const t = now + i * 5 * 60000;
+            let rpsM, latM, errM, cpuM, podsM;
+            if (i < 3) { rpsM = 10; latM = 8; errM = 60; cpuM = 2.2; podsM = 1; } // overload — pods haven't scaled
+            else if (i < 8) { rpsM = 8 - (i - 3) * 1.2; latM = 6 - (i - 3); errM = 30 - (i - 3) * 4; cpuM = 1.8; podsM = 1 + (i - 2) * 0.8; } // scaling up
+            else { rpsM = 3 - (i - 8) * 0.25; latM = 2; errM = 2; cpuM = 1.2; podsM = 3 - (i - 8) * 0.2; } // recovery
+            rows.push(makeRow({ rps: rpsM, lat: latM, err: errM, cpu: cpuM, mem: 1 + cpuM * 0.3, pods: Math.max(1, podsM) }, t));
+        }
+    } else if (type === "gradual_ramp") {
+        // Steady linear 1→3 over 25 ticks
+        for (let i = 0; i < 25; i++) {
+            const t = now + i * 5 * 60000;
+            const f = 1 + (i / 24) * 2; // 1→3
+            rows.push(makeRow({ rps: f, lat: 1 + f * 0.3, err: 1 + f * 0.1, cpu: 1 + f * 0.3, mem: 1 + f * 0.2, pods: f }, t));
+        }
+    } else if (type === "load_test") {
+        // Sudden 3× → hold 15 ticks → clean drop
+        for (let i = 0; i < 20; i++) {
+            const t = now + i * 5 * 60000;
+            let f;
+            if (i < 2) f = 1 + (i / 2) * 2; // quick ramp
+            else if (i < 17) f = 3 + (Math.random() - 0.5) * 0.2; // sustained ±noise
+            else f = 3 - ((i - 17) / 3) * 2; // clean recovery
+            rows.push(makeRow({ rps: f, lat: 1 + f * 0.25, err: 1.2, cpu: 1 + f * 0.28, mem: 1 + f * 0.18, pods: Math.max(1, f * 0.95) }, t));
+        }
+    }
+
+    return rows;
+};
+
 // MLModelContext is imported from MLModelContextDef.js
 // hook lives in useMLModel.js to satisfy Fast Refresh constraints
 
@@ -65,6 +164,29 @@ export const MLModelProvider = ({ children }) => {
 
     const provisioningStats = useRef({ under: 0, exact: 0, over: 0, total: 0 });
     const errorHistory = useRef([]);
+    // Baseline stats for OOD detection (updated only from non-spike rows)
+    const baselineRef = useRef({ rps: [], cpu: [], latency: [] });
+    const [oodScore, setOodScore] = useState(0);
+    const [modelConfidence, setModelConfidence] = useState("High");
+
+    // Spike injection
+    const [spikeActive, setSpikeActive] = useState(null);
+    const spikeEndRef = useRef(null);
+    const lastRowRef = useRef(null);
+
+    const injectSpike = (type) => {
+        const baseRow = lastRowRef.current || simulationQueue[simIndexRef.current - 1];
+        if (!baseRow) return;
+        const spikeRows = generateSpikeRows(type, baseRow);
+        const insertAt = simIndexRef.current;
+        setSpikeActive(type);
+        spikeEndRef.current = insertAt + spikeRows.length;
+        setSimulationQueue((prev) => {
+            const next = [...prev];
+            next.splice(insertAt, 0, ...spikeRows);
+            return next;
+        });
+    };
 
     const formatTime = (ts) =>
         new Date(ts).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
@@ -168,7 +290,14 @@ export const MLModelProvider = ({ children }) => {
                 return;
             }
 
+            // Clear spike flag once we've consumed all injected rows
+            if (spikeEndRef.current && idx >= spikeEndRef.current) {
+                setSpikeActive(null);
+                spikeEndRef.current = null;
+            }
+
             const row = simulationQueue[idx];
+            lastRowRef.current = row;
             const timestamp = new Date(row.timestamp);
             const timeStr = formatTime(row.timestamp);
             const actualPods = parseInt(row.current_pod_count) || 2;
@@ -191,7 +320,8 @@ export const MLModelProvider = ({ children }) => {
             const t0 = performance.now();
             try {
                 const resp = await predictPodScaling(apiWindow, timestamp.toISOString());
-                predictedPodsAtT5 = resp.predicted_pods || actualPods;
+                // Round to nearest integer — pod counts are always whole numbers
+                predictedPodsAtT5 = Math.round(resp.predicted_pods) || actualPods;
                 setApiLatency(Math.round(performance.now() - t0));
             } catch (e) {
                 console.error("Prediction error:", e.message);
@@ -242,7 +372,12 @@ export const MLModelProvider = ({ children }) => {
 
             // Pod count chart
             setPodData((prev) => {
-                const history = prev.filter((d) => d.actual !== null).slice(-25);
+                // Strip predicted from all history so the forecast line only shows current→future
+                const history = prev
+                    .filter((d) => d.actual !== null)
+                    .slice(-25)
+                    .map((d) => ({ time: d.time, actual: d.actual, predicted: null }));
+                // Current tick: anchor both lines at the same value
                 const current = { time: timeStr, actual: actualPods, predicted: actualPods };
                 const future = [];
                 for (let i = 1; i <= 5; i++) {
@@ -252,6 +387,32 @@ export const MLModelProvider = ({ children }) => {
                 }
                 return [...history, current, ...future];
             });
+
+            // OOD detection: compare current row to baseline (pre-spike) mean/std
+            const bl = baselineRef.current;
+            const computeStats = (arr) => {
+                if (arr.length < 5) return { mean: null, std: null };
+                const mean = arr.reduce((s, v) => s + v, 0) / arr.length;
+                const std = Math.sqrt(arr.reduce((s, v) => s + (v - mean) ** 2, 0) / arr.length) || 1;
+                return { mean, std };
+            };
+            const blRps = computeStats(bl.rps);
+            const blCpu = computeStats(bl.cpu);
+            const blLat = computeStats(bl.latency);
+            let maxZ = 0;
+            if (blRps.mean) maxZ = Math.max(maxZ, Math.abs((requestRate - blRps.mean) / blRps.std));
+            if (blCpu.mean) maxZ = Math.max(maxZ, Math.abs((cpuUsage - blCpu.mean) / blCpu.std));
+            if (blLat.mean) maxZ = Math.max(maxZ, Math.abs((latency - blLat.mean) / blLat.std));
+            const newOod = Math.min(100, Math.round(maxZ * 10));
+            setOodScore(newOod);
+            const newConf = maxZ < 2 ? "High" : maxZ < 4 ? "Medium" : maxZ < 7 ? "Low" : "Critical";
+            setModelConfidence(newConf);
+            // Update baseline only from normal (non-spike) rows
+            if (!row._isSpike) {
+                bl.rps = [...bl.rps.slice(-49), requestRate];
+                bl.cpu = [...bl.cpu.slice(-49), cpuUsage];
+                bl.latency = [...bl.latency.slice(-49), latency];
+            }
 
             // Resource + performance charts
             setResourceData((prev) => [...prev.slice(-19), { time: timeStr, cpu: cpuUsage, memory: memUsage, network: networkIo }]);
@@ -276,6 +437,18 @@ export const MLModelProvider = ({ children }) => {
             if (cpuUsage > 85) newAlerts.push({ level: "warning", message: `High CPU: ${cpuUsage.toFixed(1)}%`, detail: "Pod resource saturation — scaling urgency increased", time: timeStr });
             if (latency > 100) newAlerts.push({ level: "warning", message: `Elevated P95 latency: ${latency.toFixed(0)}ms`, detail: "User-facing latency above 100ms threshold", time: timeStr });
             if (errorRate > 2) newAlerts.push({ level: "critical", message: `High error rate: ${errorRate.toFixed(2)}%`, detail: "Service error rate exceeding 2% threshold", time: timeStr });
+            // OOD alert when model enters low/critical confidence during a spike
+            if (spikeActive && (newConf === "Low" || newConf === "Critical") && newOod > (newConf === "Critical" ? 60 : 40)) {
+                const alreadyHasOod = newAlerts.some((a) => a.message?.startsWith("[OOD]"));
+                if (!alreadyHasOod) {
+                    newAlerts.push({
+                        level: newConf === "Critical" ? "critical" : "warning",
+                        message: `[OOD] Model confidence: ${newConf} — input ${newOod}% out-of-distribution`,
+                        detail: `RPS z=${blRps.mean ? ((requestRate - blRps.mean) / blRps.std).toFixed(1) : "n/a"}, CPU z=${blCpu.mean ? ((cpuUsage - blCpu.mean) / blCpu.std).toFixed(1) : "n/a"}, Latency z=${blLat.mean ? ((latency - blLat.mean) / blLat.std).toFixed(1) : "n/a"} — predictions may under-estimate demand`,
+                        time: timeStr,
+                    });
+                }
+            }
             if (newAlerts.length > 0) setAlerts((prev) => [...prev.slice(-49), ...newAlerts]);
 
             simIndexRef.current = idx + 1;
@@ -296,6 +469,10 @@ export const MLModelProvider = ({ children }) => {
                 // History / analysis
                 predictionLog, accuracyHistory, currentFeatures, featureHistory,
                 alerts, modelMetrics,
+                // Spike injection
+                injectSpike, spikeActive,
+                // OOD / confidence
+                oodScore, modelConfidence,
             }}
         >
             {children}

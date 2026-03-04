@@ -4,13 +4,14 @@ import TitleHeader from "../../../components/common/TitleHeader";
 import PodCountChart from "../../../components/mlmodel/PodCountChart";
 import ProvisioningEfficiency from "../../../components/mlmodel/ProvisioningEfficiency";
 import ModelInfoPanel from "../../../components/mlmodel/ModelInfoPanel";
+import TrafficSpikePanel from "../../../components/mlmodel/TrafficSpikePanel";
 import useMLModel from "../../../services/useMLModel";
 
 const MLModelOverview = () => {
     const {
         isApiHealthy, isSimulating, apiLatency, modelHealth,
         currentPods, predictedPods, scalingStatus,
-        podData, efficiencyData, modelMetrics,
+        podData, efficiencyData, modelMetrics, spikeActive,
     } = useMLModel();
 
     const kpis = [
@@ -72,6 +73,19 @@ const MLModelOverview = () => {
                 title="ML Ops — Overview"
                 subtitle="Live model status, scaling decisions, and pod prediction chart"
             />
+
+            {/* Spike active banner */}
+            {spikeActive && (
+                <div className="px-4 py-3 text-sm font-medium rounded-xl flex items-center gap-3 bg-gradient-to-r from-orange-50 to-red-50 text-orange-800 border border-orange-300 dark:from-orange-900/30 dark:to-red-900/30 dark:text-orange-300 dark:border-orange-700 animate-pulse">
+                    <div className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping" />
+                    <Icon icon="mdi:lightning-bolt" className="w-5 h-5 text-orange-500" />
+                    <span className="font-bold uppercase tracking-wide">Traffic Spike Active</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-800/40 font-mono">
+                        {spikeActive.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </span>
+                    <span className="ml-auto text-xs opacity-70">Model responding to injected spike data — real BiLSTM inference</span>
+                </div>
+            )}
 
             {/* Connection banner */}
             <div
@@ -141,6 +155,9 @@ const MLModelOverview = () => {
                 apiLatency={apiLatency}
                 isApiHealthy={isApiHealthy}
             />
+
+            {/* Traffic spike demo panel */}
+            <TrafficSpikePanel />
         </div>
     );
 };
