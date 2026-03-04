@@ -36,6 +36,7 @@ const SUB_MENUS = {
   scaling: [
     { id: "event", label: "Scaling Event", hasNotification: false },
     { id: "metrics", label: "Resilience Metrics", hasNotification: false },
+    { id: "chaos-analysis", label: "Chaos Analysis", hasNotification: false },
     { id: "real-time-scaling", label: "Real-Time Scaling", hasNotification: false },
     { id: "health", label: "Deployment Health", hasNotification: false },
     { id: "alerts", label: "Alerts", hasNotification: true },

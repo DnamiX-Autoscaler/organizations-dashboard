@@ -43,6 +43,10 @@ export const getAlertsStream = (onMessage, onError) => {
     return createStream(AUTOSCALING_ENDPOINTS.ALERTS.STREAM, onMessage, onError);
 };
 
+export const getChaosStream = (onMessage, onError) => {
+    return createStream(AUTOSCALING_ENDPOINTS.CHAOS.STREAM, onMessage, onError);
+};
+
 export const publishAlert = async (alertData) => {
     try {
         const response = await fetch(`${BASE_URL}${AUTOSCALING_ENDPOINTS.ALERTS.PUBLISH}`, {

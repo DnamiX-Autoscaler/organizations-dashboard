@@ -12,6 +12,9 @@ const AUTOSCALING_ENDPOINTS = {
         PUBLISH: "/alerts/publish",
         STREAM: "/alerts/stream"
     },
+    CHAOS: {
+        STREAM: "/events/chaos"
+    }
 };
 
 export default AUTOSCALING_ENDPOINTS;
