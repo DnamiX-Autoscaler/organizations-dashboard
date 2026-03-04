@@ -4,7 +4,11 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import deploymentHealthData from "../../../data/deploymentHealthData";
 import ServiceMetricsGroup from "./ServiceMetricsGroup";
 
+import { useDeploymentHealthSSE } from "../../../hooks/useDeploymentHealthSSE";
+
 const DeploymentHealth = () => {
+    const healthData = useDeploymentHealthSSE(deploymentHealthData);
+
     const {
         overallScore,
         podStatus,
@@ -14,7 +18,7 @@ const DeploymentHealth = () => {
         availability,
         serviceAvailabilityBadges,
         projects
-    } = deploymentHealthData;
+    } = healthData || deploymentHealthData;
 
     const getStatusColor = (status) => {
         switch (status) {

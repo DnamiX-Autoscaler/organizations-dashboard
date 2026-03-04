@@ -14,6 +14,10 @@ const AUTOSCALING_ENDPOINTS = {
     },
     CHAOS: {
         STREAM: "/events/chaos"
+    },
+    DEPLOYMENT_HEALTH: {
+        REPORT: "/deployment-health/report",
+        STREAM: "/events/deployment-health"
     }
 };
 
