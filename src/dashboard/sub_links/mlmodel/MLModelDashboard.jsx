@@ -6,6 +6,11 @@ import PerformanceMetrics from "../../../components/mlmodel/PerformanceMetrics";
 import ProvisioningEfficiency from "../../../components/mlmodel/ProvisioningEfficiency";
 import PredictionLogTable from "../../../components/mlmodel/PredictionLogTable";
 import ModelMetrics from "../../../components/mlmodel/ModelMetrics";
+import ModelInfoPanel from "../../../components/mlmodel/ModelInfoPanel";
+import CostSavingsPanel from "../../../components/mlmodel/CostSavingsPanel";
+import AccuracyTrendChart from "../../../components/mlmodel/AccuracyTrendChart";
+import FeatureMonitor from "../../../components/mlmodel/FeatureMonitor";
+import AlertsPanel from "../../../components/mlmodel/AlertsPanel";
 import {
     getPodCountData,
     getResourceMetricsData,
@@ -46,6 +51,11 @@ const MLModelDashboard = () => {
         mae: 0, rmse: 0, accuracy: 0, accuracyWithin1: 0,
         totalPredictions: 0, underCount: 0, exactCount: 0, overCount: 0
     });
+    const [modelHealth, setModelHealth] = useState(null);
+    const [accuracyHistory, setAccuracyHistory] = useState([]);
+    const [currentFeatures, setCurrentFeatures] = useState(null);
+    const [featureHistory, setFeatureHistory] = useState([]);
+    const [alerts, setAlerts] = useState([]);
     const provisioningStats = useRef({ under: 0, exact: 0, over: 0, total: 0 });
     const errorHistory = useRef([]);
 
@@ -117,10 +127,12 @@ const MLModelDashboard = () => {
         checkApiHealth().then(status => {
             if (status) {
                 setIsApiHealthy(true);
+                setModelHealth(status);
                 fetchSimulationData().then(data => {
                     if (data && data.length > 48) {
                         setSimulationQueue(data);
                         initializeChartsFromData(data.slice(0, 20));
+                        setFeatureHistory(data.slice(0, 48));
                         simIndexRef.current = 48;
                         setIsSimulating(true);
                     }
@@ -152,6 +164,7 @@ const MLModelDashboard = () => {
             const networkIo = parseFloat(currentRow.mesh_inbound_rps) || 0;
             const latency = parseFloat(currentRow.latency_p95_ms) || 0;
             const requestRate = parseFloat(currentRow.request_rate_rps) || 0;
+            const errorRate = parseFloat(currentRow.error_rate_percent) || 0;
             const futureRow = simulationQueue[idx + 5];
             const actualPodsAtT5 = futureRow ? parseInt(futureRow.current_pod_count) : actualPods;
 
@@ -211,8 +224,48 @@ const MLModelDashboard = () => {
                 return [...history, current, ...futurePoints];
             });
 
+            // Update live feature state + history
+            setCurrentFeatures({ ...currentRow });
+            setFeatureHistory(prev => [...prev.slice(-99), currentRow]);
+
+            // Update accuracy trend history
+            const errors = errorHistory.current;
+            if (errors.length > 0) {
+                const n = errors.length;
+                const absErrs = errors.map(e => Math.abs(e));
+                const mae = absErrs.reduce((s, e) => s + e, 0) / n;
+                const rmse = Math.sqrt(errors.reduce((s, e) => s + e * e, 0) / n);
+                setAccuracyHistory(prev => [...prev.slice(-89), { time: timeStr, mae, rmse }]);
+            }
+
+            // Generate contextual alerts
+            const newAlerts = [];
+            const absError = Math.abs(predictionError);
+            if (absError > 3) {
+                newAlerts.push({ level: "critical", message: `Large prediction error: ${predictionError > 0 ? '+' : ''}${predictionError} pods`, detail: `Predicted ${predictedPodsAtT5} vs actual ${actualPodsAtT5} at T+5`, time: timeStr });
+            } else if (absError > 1) {
+                newAlerts.push({ level: "warning", message: `Prediction miss by ${absError} pods`, detail: `Target: ${actualPodsAtT5} pods · Got: ${predictedPodsAtT5} pods`, time: timeStr });
+            }
+            // Consecutive under-provisioning
+            const recentErrors = errorHistory.current.slice(-5);
+            if (recentErrors.length === 5 && recentErrors.every(e => e < -1)) {
+                newAlerts.push({ level: "critical", message: "Consecutive under-provisioning (5 in a row)", detail: "Model consistently under-estimating pod demand — SLA risk elevated", time: timeStr });
+            }
+            if (cpuUsage > 85) {
+                newAlerts.push({ level: "warning", message: `High CPU: ${cpuUsage.toFixed(1)}%`, detail: "Pod resource saturation — scaling urgency increased", time: timeStr });
+            }
+            if (latency > 100) {
+                newAlerts.push({ level: "warning", message: `Elevated P95 latency: ${latency.toFixed(0)}ms`, detail: "User-facing latency above 100ms threshold", time: timeStr });
+            }
+            if (errorRate > 2) {
+                newAlerts.push({ level: "critical", message: `High error rate: ${errorRate.toFixed(2)}%`, detail: "Service error rate exceeding 2% threshold", time: timeStr });
+            }
+            if (newAlerts.length > 0) {
+                setAlerts(prev => [...prev.slice(-49), ...newAlerts]);
+            }
+
             setResourceData(prev => [...prev.slice(-19), { time: timeStr, cpu: cpuUsage, memory: memUsage, network: networkIo }]);
-            setPerformanceData(prev => [...prev.slice(-19), { time: timeStr, latency, requests: requestRate }]);
+            setPerformanceData(prev => [...prev.slice(-19), { time: timeStr, latency, requests: requestRate, errorRate }]);
             setEfficiencyData([
                 { name: 'Under-provisioned', value: pct.under, color: '#ef4444' },
                 { name: 'Exact Match', value: pct.exact, color: '#10b981' },
@@ -262,19 +315,38 @@ const MLModelDashboard = () => {
                 ))}
             </div>
 
+            {/* Row 1: Model Info + Cost Savings */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ModelInfoPanel modelHealth={modelHealth} apiLatency={apiLatency} isApiHealthy={isApiHealthy} />
+                <CostSavingsPanel modelMetrics={modelMetrics} />
+            </div>
+
+            {/* Row 2: Model Performance Metrics */}
             <ModelMetrics metrics={modelMetrics} />
 
+            {/* Row 3: Pod Prediction + Provisioning Efficiency */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2"><PodCountChart data={podData} /></div>
                 <div className="lg:col-span-1"><ProvisioningEfficiency data={efficiencyData} /></div>
             </div>
 
+            {/* Row 4: Accuracy Trend + Alerts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <AccuracyTrendChart accuracyHistory={accuracyHistory} />
+                <AlertsPanel alerts={alerts} />
+            </div>
+
+            {/* Row 5: Prediction Log (with pagination + CSV export) */}
             <PredictionLogTable logs={predictionLog} />
 
+            {/* Row 6: Resource + Performance */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <ResourceMetrics data={resourceData} />
                 <PerformanceMetrics data={performanceData} />
             </div>
+
+            {/* Row 7: Live Feature Monitor */}
+            <FeatureMonitor currentFeatures={currentFeatures} featureHistory={featureHistory} />
         </div>
     );
 };
