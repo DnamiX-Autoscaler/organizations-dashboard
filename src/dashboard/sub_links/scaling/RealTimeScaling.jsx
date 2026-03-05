@@ -12,56 +12,68 @@ const RealTimeScaling = () => {
     const [deployments, setDeployments] = useState([]);
 
     useEffect(() => {
-        const eventsStream = getScalingEventsStream((data) => {
-            setRecentActivity(prev => {
-                const exists = prev.find(e => e._id === data._id);
-                if (exists) return prev;
-                const mapped = {
-                    _id: data._id,
-                    timestamp: data.timestamp,
-                    deployment: data.deployment,
-                    decision: data.status,
-                    action: data.scale_action === 'scale_up' ? 'Scaling Up' : 'Scaling Down',
-                    from: data.previous_replicas,
-                    to: data.required_replicas,
-                    reason: data.message || 'Auto-scaling decision based on metrics'
-                };
-                return [mapped, ...prev].slice(0, 20);
-            });
-        });
+        const eventsStream = getScalingEventsStream(
+            (data) => {
+                setRecentActivity(prev => {
+                    const exists = prev.find(e => e._id === data._id);
+                    if (exists) return prev;
+                    const mapped = {
+                        _id: data._id,
+                        timestamp: data.timestamp,
+                        deployment: data.deployment,
+                        decision: data.status,
+                        action: data.scale_action === 'scale_up' ? 'Scaling Up' : 'Scaling Down',
+                        from: data.previous_replicas,
+                        to: data.required_replicas,
+                        reason: data.message || 'Auto-scaling decision based on metrics'
+                    };
+                    return [mapped, ...prev].slice(0, 20);
+                });
+            },
+            (error) => {
+                console.error("Scaling events stream error:", error);
+            },
+            { all: true } // Get all events for real-time monitoring
+        );
 
-        const statusStream = getDeploymentStatusStream((data) => {
-            setDeployments(prev => {
-                const index = prev.findIndex(d => d.name === data.deployment);
-                const updatedDeployment = {
-                    name: data.deployment,
-                    currentReplicas: data.required_replicas || data.previous_replicas,
-                    desiredReplicas: data.required_replicas,
-                    trend: data.scale_action === 'scale_up' ? 'scaling-up' : (data.scale_action === 'scale_down' ? 'scaling-down' : 'stable'),
-                    status: data.status === 'SUCCESS_VALIDATED' ? 'healthy' : (data.status === 'SCALING' ? 'scaling' : 'error'),
-                    lastScalingTime: data.timestamp,
-                    lastAction: data.scale_action === 'scale_up' ? 'Scale up' : 'Scale down',
-                    cpuUsage: data.validation?.metricsEvaluation?.find(m => m.metric === 'cpuPercent')?.value || 0,
-                    memoryUsage: data.validation?.metricsEvaluation?.find(m => m.metric === 'memPercent')?.value || 0,
-                };
+        const statusStream = getDeploymentStatusStream(
+            (data) => {
+                setDeployments(prev => {
+                    const index = prev.findIndex(d => d.name === data.deployment);
+                    const updatedDeployment = {
+                        name: data.deployment,
+                        currentReplicas: data.required_replicas || data.previous_replicas,
+                        desiredReplicas: data.required_replicas,
+                        trend: data.scale_action === 'scale_up' ? 'scaling-up' : (data.scale_action === 'scale_down' ? 'scaling-down' : 'stable'),
+                        status: data.status === 'SUCCESS_VALIDATED' ? 'healthy' : (data.status === 'SCALING' ? 'scaling' : 'error'),
+                        lastScalingTime: data.timestamp,
+                        lastAction: data.scale_action === 'scale_up' ? 'Scale up' : 'Scale down',
+                        cpuUsage: data.validation?.metricsEvaluation?.find(m => m.metric === 'cpuPercent')?.value || 0,
+                        memoryUsage: data.validation?.metricsEvaluation?.find(m => m.metric === 'memPercent')?.value || 0,
+                    };
 
-                if (index !== -1) {
-                    const next = [...prev];
-                    next[index] = updatedDeployment;
-                    return next;
-                } else {
-                    return [...prev, updatedDeployment];
-                }
-            });
+                    if (index !== -1) {
+                        const next = [...prev];
+                        next[index] = updatedDeployment;
+                        return next;
+                    } else {
+                        return [...prev, updatedDeployment];
+                    }
+                });
 
-            setLiveUsage(prev => ({
-                ...prev,
-                [data.deployment]: {
-                    cpu: data.validation?.metricsEvaluation?.find(m => m.metric === 'cpuPercent')?.value || 0,
-                    memory: data.validation?.metricsEvaluation?.find(m => m.metric === 'memPercent')?.value || 0
-                }
-            }));
-        });
+                setLiveUsage(prev => ({
+                    ...prev,
+                    [data.deployment]: {
+                        cpu: data.validation?.metricsEvaluation?.find(m => m.metric === 'cpuPercent')?.value || 0,
+                        memory: data.validation?.metricsEvaluation?.find(m => m.metric === 'memPercent')?.value || 0
+                    }
+                }));
+            },
+            (error) => {
+                console.error("Deployment status stream error:", error);
+            },
+            { all: true } // Get all deployment statuses
+        );
 
         return () => {
             eventsStream.close();

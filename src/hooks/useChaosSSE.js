@@ -25,7 +25,8 @@ export const useChaosSSE = (initialResults = []) => {
             console.error("SSE Chaos Stream Error:", err);
         };
 
-        const eventSource = getChaosStream(onMessage, onError);
+        // Get all chaos experiments for comprehensive analysis
+        const eventSource = getChaosStream(onMessage, onError, { all: true });
 
         return () => {
             eventSource.close();

@@ -14,14 +14,20 @@ const ScalingEvent = () => {
   const [events, setEvents] = useState([]);
 
   useEffect(() => {
-    const stream = getScalingEventsStream((data) => {
-      setEvents((prev) => {
-        // Prevent duplicates if same ID comes through
-        const exists = prev.find(e => e._id === data._id);
-        if (exists) return prev;
-        return [data, ...prev].slice(0, 50);
-      });
-    });
+    const stream = getScalingEventsStream(
+      (data) => {
+        setEvents((prev) => {
+          // Prevent duplicates if same ID comes through
+          const exists = prev.find(e => e._id === data._id);
+          if (exists) return prev;
+          return [data, ...prev].slice(0, 50);
+        });
+      },
+      (error) => {
+        console.error("Scaling events stream error:", error);
+      },
+      { all: true } // Get all records for comprehensive event tracking
+    );
 
     return () => stream.close();
   }, []);

@@ -14,17 +14,38 @@ const ResilienceMetrics = () => {
   const [selectedDeployment, setSelectedDeployment] = useState("");
   const [selectedDecision, setSelectedDecision] = useState("");
   const [metricsData, setMetricsData] = useState([]);
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
 
   useEffect(() => {
-    const stream = getResilienceMetricsStream((data) => {
-      setMetricsData((prev) => {
-        const exists = prev.find(m => m._id === data._id);
-        if (exists) return prev;
-        return [data, ...prev].slice(0, 50);
-      });
-    });
+    // Fetch all records for comprehensive monitoring
+    const stream = getResilienceMetricsStream(
+      (data) => {
+        setIsLiveConnected(true);
+        setMetricsData((prev) => {
+          // For live status, replace any existing live status for this specific service
+          if (data.type === "LIVE_STATUS") {
+            const otherData = prev.filter(m =>
+              !(m.type === "LIVE_STATUS" && m.deployment === data.deployment && m.project === data.project)
+            );
+            return [data, ...otherData].slice(0, 50);
+          }
 
-    return () => stream.close();
+          const exists = prev.find(m => m._id === data._id);
+          if (exists) return prev;
+          return [data, ...prev].slice(0, 50);
+        });
+      },
+      (error) => {
+        console.error("Resilience metrics stream error:", error);
+        setIsLiveConnected(false);
+      },
+      { all: true } // Get all records for comprehensive monitoring
+    );
+
+    return () => {
+      stream.close();
+      setIsLiveConnected(false);
+    };
   }, []);
 
   const filteredData = metricsData.filter((item) => {
@@ -66,21 +87,49 @@ const ResilienceMetrics = () => {
   const hierarchicalData = useMemo(() => {
     const grouped = {};
 
-    metricsData.forEach(item => {
+    // Separate event data (full metrics) from live status (partial real-time updates)
+    const eventData = metricsData.filter(item => item.type !== "LIVE_STATUS");
+    const liveData = metricsData.filter(item => item.type === "LIVE_STATUS");
+
+    // First, process event data to get all metrics
+    eventData.forEach(item => {
+      const proj = item.project || "Unassigned";
+      const serv = item.deployment;
+
+      if (!grouped[proj]) grouped[proj] = {};
+      if (!grouped[proj][serv]) {
+        grouped[proj][serv] = item.validation?.metricsEvaluation || [];
+      }
+    });
+
+    // Then, merge live status data to update real-time metrics (CPU, Memory)
+    liveData.forEach(item => {
       const proj = item.project || "Unassigned";
       const serv = item.deployment;
 
       if (!grouped[proj]) grouped[proj] = {};
 
+      const liveMetrics = item.validation?.metricsEvaluation || [];
+      
       if (!grouped[proj][serv]) {
-        // Map the detailed validation metrics to the format expected by ProjectMetricsAccordion
-        const metrics = {};
-        if (item.validation && item.validation.metricsEvaluation) {
-          item.validation.metricsEvaluation.forEach(m => {
-            metrics[m.metric] = m.value;
-          });
-        }
-        grouped[proj][serv] = metrics;
+        // If no event data exists, use live data as is
+        grouped[proj][serv] = liveMetrics;
+      } else {
+        // Merge: update existing metrics with live values, keep others unchanged
+        const existingMetrics = grouped[proj][serv];
+        const mergedMetrics = existingMetrics.map(metric => {
+          const liveUpdate = liveMetrics.find(m => m.metric === metric.metric);
+          return liveUpdate ? { ...metric, value: liveUpdate.value, tier: liveUpdate.tier } : metric;
+        });
+        
+        // Add any new metrics from live data that don't exist in event data
+        liveMetrics.forEach(liveMetric => {
+          if (!existingMetrics.find(m => m.metric === liveMetric.metric)) {
+            mergedMetrics.push(liveMetric);
+          }
+        });
+
+        grouped[proj][serv] = mergedMetrics;
       }
     });
 
@@ -185,8 +234,19 @@ const ResilienceMetrics = () => {
         {(selectedProject || selectedDeployment || selectedDecision) && (
           <ClearFilterButton onClick={handleClearFilter} />
         )}
-        <div className="ml-auto text-sm text-gray-600 dark:text-gray-400">
-          Showing <span className="font-semibold">{filteredData.length}</span> results
+        <div className="ml-auto flex items-center gap-3">
+          {isLiveConnected && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 rounded-full">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              <span className="text-xs font-medium text-green-700 dark:text-green-300">LIVE</span>
+            </div>
+          )}
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Showing <span className="font-semibold">{filteredData.length}</span> results
+          </div>
         </div>
       </div>
 
@@ -194,13 +254,27 @@ const ResilienceMetrics = () => {
         <div className="space-y-4">
           {Object.entries(hierarchicalData)
             .filter(([proj]) => !selectedProject || proj === selectedProject)
-            .map(([projectName, servicesData]) => (
-              <ProjectMetricsAccordion
-                key={projectName}
-                projectName={projectName}
-                servicesData={servicesData}
-              />
-            ))}
+            .map(([projectName, servicesData]) => {
+              // Filter services based on selected deployment
+              const filteredServices = selectedDeployment
+                ? Object.fromEntries(
+                    Object.entries(servicesData).filter(([serviceName]) => 
+                      serviceName === selectedDeployment
+                    )
+                  )
+                : servicesData;
+
+              // Skip empty projects after filtering
+              if (Object.keys(filteredServices).length === 0) return null;
+
+              return (
+                <ProjectMetricsAccordion
+                  key={projectName}
+                  projectName={projectName}
+                  servicesData={filteredServices}
+                />
+              );
+            })}
         </div>
       )}
 

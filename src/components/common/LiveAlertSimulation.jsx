@@ -52,7 +52,7 @@ const LiveAlertSimulation = () => {
 
         const interval = setInterval(() => {
             triggerAlert();
-        }, 10000); // Every 10 seconds
+        }, 3000); // Every 10 seconds
 
         return () => {
             clearTimeout(initialTimer);

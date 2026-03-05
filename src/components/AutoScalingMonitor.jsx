@@ -7,14 +7,26 @@ const AutoScalingMonitor = () => {
 
     useEffect(() => {
         // Connect to Scaling Events Stream
-        const eventsStream = getScalingEventsStream((data) => {
-            setScalingEvents(prev => [data, ...prev].slice(0, 20));
-        });
+        const eventsStream = getScalingEventsStream(
+            (data) => {
+                setScalingEvents(prev => [data, ...prev].slice(0, 20));
+            },
+            (error) => {
+                console.error("Auto-scaling events stream error:", error);
+            },
+            { limit: 20 } // Limit to 20 most recent events for this monitor
+        );
 
         // Connect to Resilience Metrics Stream
-        const metricsStream = getResilienceMetricsStream((data) => {
-            setResilienceMetrics(prev => [data, ...prev].slice(0, 20));
-        });
+        const metricsStream = getResilienceMetricsStream(
+            (data) => {
+                setResilienceMetrics(prev => [data, ...prev].slice(0, 20));
+            },
+            (error) => {
+                console.error("Resilience metrics stream error:", error);
+            },
+            { limit: 20 } // Limit to 20 most recent metrics for this monitor
+        );
 
         return () => {
             eventsStream.close();
