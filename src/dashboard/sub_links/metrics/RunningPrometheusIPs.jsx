@@ -39,7 +39,7 @@ const RunningPrometheusIPs = () => {
         if (autoRefresh) {
             const interval = setInterval(() => {
                 loadServices();
-            }, 10000);
+            }, 3000);
 
             return () => clearInterval(interval);
         }
