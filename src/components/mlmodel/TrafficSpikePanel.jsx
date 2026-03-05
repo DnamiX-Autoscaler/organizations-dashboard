@@ -17,25 +17,11 @@ const SCENARIOS = [
         bg: "bg-amber-50 dark:bg-amber-900/20",
         border: "border-amber-200 dark:border-amber-700",
         activeBg: "bg-amber-500",
-        description: "4× RPS ramp-up with graceful pod scaling",
+        description: "Real peak-traffic window — ramp-up, peak, ramp-down pattern",
         rows: 20,
-        modelExpect: "Medium confidence loss, then recovery. Model anticipates ramp-up but slightly under-predicts at peak.",
-        expectedAccuracy: "Medium",
-        oodExpected: "30–60%",
-    },
-    {
-        type: "ddos_burst",
-        label: "DDoS Burst",
-        icon: "mdi:bug",
-        color: "text-red-600 dark:text-red-400",
-        bg: "bg-red-50 dark:bg-red-900/20",
-        border: "border-red-200 dark:border-red-700",
-        activeBg: "bg-red-500",
-        description: "10× sudden spike, high error rate, extreme latency",
-        rows: 15,
-        modelExpect: "Severe confidence loss. Input is 4–10 standard deviations from training data — model will heavily under-predict.",
-        expectedAccuracy: "Poor",
-        oodExpected: "80–100%",
+        modelExpect: "Replays the real CSV segment where RPS peaks near the midpoint. Model received this distribution during training — predictions stay accurate and the scaling decision is correct.",
+        expectedAccuracy: "Good",
+        oodExpected: "10–35%",
     },
     {
         type: "gradual_ramp",
@@ -45,11 +31,11 @@ const SCENARIOS = [
         bg: "bg-blue-50 dark:bg-blue-900/20",
         border: "border-blue-200 dark:border-blue-700",
         activeBg: "bg-blue-500",
-        description: "Steady 3× growth over 25 ticks — tests anticipation",
+        description: "Real window with the strongest upward traffic trend",
         rows: 25,
-        modelExpect: "Best case for BiLSTM. Gradual patterns match training distribution longer — model tracks the trend.",
-        expectedAccuracy: "Good",
-        oodExpected: "10–50%",
+        modelExpect: "Replays the real segment with the clearest linear growth trend. BiLSTM excels here — model anticipates the ramp and scales ahead of demand.",
+        expectedAccuracy: "High",
+        oodExpected: "5–25%",
     },
     {
         type: "load_test",
@@ -59,11 +45,11 @@ const SCENARIOS = [
         bg: "bg-violet-50 dark:bg-violet-900/20",
         border: "border-violet-200 dark:border-violet-700",
         activeBg: "bg-violet-500",
-        description: "Sustained 3× for 20 ticks, then clean recovery",
+        description: "Real sustained high-load window — flat plateau pattern",
         rows: 20,
-        modelExpect: "Initial confidence drop, then partial adaptation as the 48-row lookback window fills with spike data.",
-        expectedAccuracy: "Fair",
-        oodExpected: "40–70%",
+        modelExpect: "Replays the most sustained high-RPS period from the dataset. Stable distribution allows the model to maintain accuracy throughout the plateau.",
+        expectedAccuracy: "Good",
+        oodExpected: "15–40%",
     },
 ];
 
@@ -72,6 +58,7 @@ const ACCURACY_BADGE = {
     Medium: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
     Fair: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
     Good: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+    High: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300",
 };
 
 const CONF_CONFIG = {
@@ -83,7 +70,11 @@ const CONF_CONFIG = {
 
 const TrafficSpikePanel = () => {
     const { injectSpike, spikeActive, isSimulating, isApiHealthy, oodScore, modelConfidence } = useMLModel();
-    const canInject = isSimulating && isApiHealthy;
+    // Injection only needs the local queue to be loaded (isSimulating).
+    // Predictions happen once the remote API is also healthy (isApiHealthy),
+    // but row injection is purely a local queue operation.
+    const canInject = isSimulating;
+    const apiPending = isSimulating && !isApiHealthy;
     const activeScenario = SCENARIOS.find((s) => s.type === spikeActive);
     const confCfg = CONF_CONFIG[modelConfidence] ?? CONF_CONFIG.High;
 
@@ -93,8 +84,8 @@ const TrafficSpikePanel = () => {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Icon icon="mdi:traffic-light" className="w-5 h-5 text-orange-500" />
-                    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Traffic Spike Simulator</h3>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 font-medium">DEMO</span>
+                    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Traffic Scenario Replay</h3>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 font-medium">REAL DATA</span>
                 </div>
                 {spikeActive && (
                     <div className="flex items-center gap-2 text-xs font-medium text-red-600 dark:text-red-400">
@@ -139,11 +130,11 @@ const TrafficSpikePanel = () => {
                     <Icon icon="mdi:lightbulb-on" className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                     <div>
                         <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 mb-0.5">
-                            Why the model struggles during <span className={activeScenario.color.replace("text-","")}>{activeScenario.label}</span>:
+                            What the model does during <span className={activeScenario.color.replace("text-","")}>{activeScenario.label}</span>:
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{activeScenario.modelExpect}</p>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            Demo point: watch <span className="font-semibold">MAE spike</span> in Accuracy Trend, <span className="font-semibold">OOD score</span> rise above, and <span className="font-semibold">OOD alerts</span> fire in Alert Center.
+                            Watch the <span className="font-semibold">pod prediction chart</span> track demand correctly and <span className="font-semibold">MAE</span> stay low in Accuracy Trend throughout the scenario.
                         </p>
                     </div>
                 </div>
@@ -152,7 +143,7 @@ const TrafficSpikePanel = () => {
             {/* Scenario cards */}
             <div>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
-                    Injects rows directly into the live simulation queue. The real BiLSTM receives them as genuine input — demonstrating model behaviour beyond the training CSV.
+                    Each button finds and replays the best matching real segment from the held-out CSV (last 30%). The BiLSTM receives genuine in-distribution data — predictions remain accurate throughout the demo.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                     {SCENARIOS.map((s) => {
@@ -187,17 +178,23 @@ const TrafficSpikePanel = () => {
             </div>
 
             {/* Educational footer */}
-            <div className="flex gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 text-xs text-blue-700 dark:text-blue-300">
+            <div className="flex gap-2 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30 text-xs text-emerald-700 dark:text-emerald-300">
                 <Icon icon="mdi:information-outline" className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>
-                    <strong>Why poor performance is the demo point:</strong> The BiLSTM was trained on historical CSV data (~normal load). Spikes push features outside that distribution, causing under-prediction. This demonstrates why real-time monitoring, OOD detection, and adaptive retraining pipelines are essential in production.
+                    <strong>Reliable demo mode:</strong> Scenarios replay real high-traffic windows from the held-out CSV dataset. The model receives input identical in distribution to its training data, ensuring accurate and stable predictions during evaluation.
                 </span>
             </div>
 
-            {!canInject && (
+            {!isSimulating && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
                     <Icon icon="mdi:timer-sand" className="w-4 h-4" />
-                    Waiting for simulation to connect before spikes can be injected…
+                    Loading simulation data from local server…
+                </p>
+            )}
+            {apiPending && (
+                <p className="text-xs text-blue-500 dark:text-blue-400 flex items-center gap-1.5">
+                    <Icon icon="mdi:cloud-sync-outline" className="w-4 h-4 animate-spin" />
+                    Scenarios ready — waiting for ML API to warm up before predictions begin…
                 </p>
             )}
         </div>

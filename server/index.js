@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import process from "node:process";
+import { readFileSync } from "node:fs";
 import { config } from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -53,6 +54,42 @@ const modelMetricsSchema = new mongoose.Schema({
 const Prediction   = mongoose.model("Prediction", predictionSchema);
 const Log          = mongoose.model("Log", logSchema);
 const ModelMetrics = mongoose.model("ModelMetrics", modelMetricsSchema);
+
+// ─── Routes: Simulation Data (local CSV) ────────────────────────────────────
+
+// Reads data.csv once, returns the last 30% as JSON.
+// This endpoint starts in <50 ms and has no dependency on the remote ML API,
+// so the frontend simulation queue populates instantly on every page load.
+const CSV_PATH = join(__dirname, "..", "backend", "data", "data.csv");
+let _simCache = null;  // cache after first parse
+
+const parseSimulationCSV = () => {
+  if (_simCache) return _simCache;
+  const raw = readFileSync(CSV_PATH, "utf8");
+  const lines = raw.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  const headers = lines[0].split(",").map((h) => h.trim());
+  const rows = lines.slice(1).map((line) => {
+    const vals = line.split(",");
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = vals[i]?.trim() ?? ""; });
+    return obj;
+  });
+  // Sort by timestamp, take last 30%
+  rows.sort((a, b) => +new Date(a.timestamp) - +new Date(b.timestamp));
+  const split = Math.floor(rows.length * 0.7);
+  _simCache = { total: rows.length, data: rows.slice(split) };
+  return _simCache;
+};
+
+app.get("/api/simulation-data", (_req, res) => {
+  try {
+    const { total, data } = parseSimulationCSV();
+    res.json({ total_rows: total, simulation_rows: data.length, data });
+  } catch (err) {
+    console.error("simulation-data error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ─── Routes: Predictions ─────────────────────────────────────────────────────
 

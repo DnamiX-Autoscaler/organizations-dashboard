@@ -5,6 +5,7 @@ import PodCountChart from "../../../components/mlmodel/PodCountChart";
 import ProvisioningEfficiency from "../../../components/mlmodel/ProvisioningEfficiency";
 import ModelInfoPanel from "../../../components/mlmodel/ModelInfoPanel";
 import TrafficSpikePanel from "../../../components/mlmodel/TrafficSpikePanel";
+import PredictionAccuracyChart from "../../../components/mlmodel/PredictionAccuracyChart";
 import useMLModel from "../../../services/useMLModel";
 
 const MLModelOverview = () => {
@@ -148,6 +149,9 @@ const MLModelOverview = () => {
                     <ProvisioningEfficiency data={efficiencyData} />
                 </div>
             </div>
+
+            {/* Accuracy chart — predicted vs actual at same T+5 moment */}
+            <PredictionAccuracyChart />
 
             {/* Model info */}
             <ModelInfoPanel
