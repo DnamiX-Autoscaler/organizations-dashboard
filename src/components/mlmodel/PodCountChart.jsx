@@ -92,7 +92,7 @@ const PodCountChart = ({ data = [] }) => {
                         Pod Count Prediction
                     </h3>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                        Solid violet = live actual · Dashed green = BiLSTM 5-min forecast
+                        Solid = live pod count · Dashed = 5-min forecast
                     </p>
                 </div>
                 <div className="flex items-center gap-2">

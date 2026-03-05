@@ -89,7 +89,7 @@ const ModelInfoPanel = ({ modelHealth, apiLatency, isApiHealthy }) => {
                         Model Information
                     </h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Active inference engine configuration
+                        Inference engine configuration
                     </p>
                 </div>
                 <div className="flex items-center gap-3">

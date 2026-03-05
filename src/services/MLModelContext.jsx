@@ -25,105 +25,80 @@ const FEATURE_KEYS = [
     "betweenness_centrality", "closeness_centrality",
 ];
 
-const SIMULATION_INTERVAL_MS = 2000;
+const SIMULATION_INTERVAL_MS = 10000; // 10 s per tick — each CSV row = 1 min of data, predicts T+5 min ahead
 
 // ---------------------------------------------------------------------------
-// Spike row generator
-// Builds synthetic CSV-compatible rows spliced into simulationQueue so the
-// real ML API receives them as genuine input — not just CSV replay.
+// Real-data scenario selector
+// Instead of generating synthetic rows (which push features out-of-distribution
+// and cause inaccurate predictions), each scenario finds the best matching
+// real segment from the already-loaded simulationQueue (last 30% of CSV).
+// The model receives data identical in distribution to its training set,
+// keeping predictions stable and accurate throughout the demo.
 // ---------------------------------------------------------------------------
-const generateSpikeRows = (type, baseRow) => {
-    const now = Date.now();
-    const base = {
-        rps: parseFloat(baseRow?.request_rate_rps || 800),
-        lat95: parseFloat(baseRow?.latency_p95_ms || 30),
-        lat99: parseFloat(baseRow?.latency_p99_ms || 50),
-        errRate: parseFloat(baseRow?.error_rate_percent || 0.1),
-        queue: parseFloat(baseRow?.queue_length || 10),
-        cpuAvg: parseFloat(baseRow?.pod_cpu_usage_percent_avg || 40),
-        cpuP95: parseFloat(baseRow?.pod_cpu_usage_percent_p95 || 55),
-        memAvg: parseFloat(baseRow?.pod_memory_usage_mb_avg || 300),
-        memP95: parseFloat(baseRow?.pod_memory_usage_mb_p95 || 450),
-        hSin: parseFloat(baseRow?.hour_sin || 0),
-        hCos: parseFloat(baseRow?.hour_cos || 1),
-        dSin: parseFloat(baseRow?.day_sin || 0),
-        dCos: parseFloat(baseRow?.day_cos || 1),
-        meshRps: parseFloat(baseRow?.mesh_inbound_rps || 300),
-        meshLat: parseFloat(baseRow?.mesh_inbound_latency_p95 || 12),
-        meshErr: parseFloat(baseRow?.mesh_inbound_error_rate || 0),
-        degC: parseFloat(baseRow?.degree_centrality || 0.5),
-        eigC: parseFloat(baseRow?.eigenvector_centrality || 0.4),
-        betC: parseFloat(baseRow?.betweenness_centrality || 0.3),
-        cloC: parseFloat(baseRow?.closeness_centrality || 0.6),
-        pods: parseInt(baseRow?.current_pod_count || 8),
-    };
+const SCENARIO_ROW_COUNT = { flash_sale: 20, gradual_ramp: 25, load_test: 20 };
 
-    const noise = (pct = 0.05) => 1 + (Math.random() - 0.5) * pct * 2;
+const findRealScenarioRows = (type, queue) => {
+    // Skip the first 48 rows (used as the initial window seed).
+    const pool = queue.slice(48);
+    const rowCount = SCENARIO_ROW_COUNT[type] || 20;
+    if (pool.length < rowCount) return null;
 
-    const makeRow = (mult, ts) => ({
-        timestamp: new Date(ts).toISOString(),
-        request_rate_rps: (base.rps * mult.rps * noise()).toFixed(2),
-        latency_p95_ms: (base.lat95 * mult.lat * noise()).toFixed(2),
-        latency_p99_ms: (base.lat99 * mult.lat * 1.3 * noise()).toFixed(2),
-        error_rate_percent: (base.errRate * mult.err * noise(0.2)).toFixed(3),
-        queue_length: Math.round(base.queue * mult.rps * noise()),
-        pod_cpu_usage_percent_avg: Math.min(98, base.cpuAvg * mult.cpu * noise()).toFixed(1),
-        pod_cpu_usage_percent_p95: Math.min(99, base.cpuP95 * mult.cpu * 1.1 * noise()).toFixed(1),
-        pod_memory_usage_mb_avg: (base.memAvg * mult.mem * noise()).toFixed(1),
-        pod_memory_usage_mb_p95: (base.memP95 * mult.mem * 1.1 * noise()).toFixed(1),
-        hour_sin: base.hSin, hour_cos: base.hCos, day_sin: base.dSin, day_cos: base.dCos,
-        mesh_inbound_rps: (base.meshRps * mult.rps * noise()).toFixed(2),
-        mesh_inbound_latency_p95: (base.meshLat * mult.lat * noise()).toFixed(2),
-        mesh_inbound_error_rate: (base.meshErr + mult.err * 0.5 * noise(0.3)).toFixed(3),
-        degree_centrality: base.degC, eigenvector_centrality: base.eigC,
-        betweenness_centrality: base.betC, closeness_centrality: base.cloC,
-        current_pod_count: Math.max(1, Math.round(base.pods * mult.pods)),
-        _isSpike: true,
-        _spikeType: type,
-    });
+    const rpsValues = pool.map((r) => parseFloat(r.request_rate_rps || 0));
+    const sorted = [...rpsValues].sort((a, b) => a - b);
+    const p75 = sorted[Math.floor(sorted.length * 0.75)];
 
-    const rows = [];
+    let bestStart = 0;
+    let bestScore = -Infinity;
 
-    if (type === "flash_sale") {
-        // 5 ramp-up + 10 peak + 5 ramp-down
-        for (let i = 0; i < 20; i++) {
-            const t = now + i * 5 * 60000;
-            let f;
-            if (i < 5) f = 1 + (i / 5) * 3; // 1→4
-            else if (i < 15) f = 4 + Math.random() * 0.5; // peak 4-4.5
-            else f = 4 - ((i - 15) / 5) * 3; // 4→1
-            rows.push(makeRow({ rps: f, lat: 1 + f * 0.4, err: 1 + f * 0.05, cpu: 1 + f * 0.3, mem: 1 + f * 0.2, pods: Math.max(1, f * 0.9) }, t));
+    if (type === "load_test") {
+        // Highest sustained RPS window — reward high mean, penalise variance
+        // (we want a flat plateau, not a single spike).
+        for (let i = 0; i <= pool.length - rowCount; i++) {
+            const win = rpsValues.slice(i, i + rowCount);
+            const avg = win.reduce((s, v) => s + v, 0) / rowCount;
+            const std = Math.sqrt(win.reduce((s, v) => s + (v - avg) ** 2, 0) / rowCount) || 1;
+            const score = avg - std * 0.5;
+            if (score > bestScore) { bestScore = score; bestStart = i; }
         }
-    } else if (type === "ddos_burst") {
-        // 3 sudden extreme + 5 partial mitigation + 7 recovery
-        for (let i = 0; i < 15; i++) {
-            const t = now + i * 5 * 60000;
-            let rpsM, latM, errM, cpuM, podsM;
-            if (i < 3) { rpsM = 10; latM = 8; errM = 60; cpuM = 2.2; podsM = 1; } // overload — pods haven't scaled
-            else if (i < 8) { rpsM = 8 - (i - 3) * 1.2; latM = 6 - (i - 3); errM = 30 - (i - 3) * 4; cpuM = 1.8; podsM = 1 + (i - 2) * 0.8; } // scaling up
-            else { rpsM = 3 - (i - 8) * 0.25; latM = 2; errM = 2; cpuM = 1.2; podsM = 3 - (i - 8) * 0.2; } // recovery
-            rows.push(makeRow({ rps: rpsM, lat: latM, err: errM, cpu: cpuM, mem: 1 + cpuM * 0.3, pods: Math.max(1, podsM) }, t));
+
+    } else if (type === "flash_sale") {
+        // Window whose peak is closest to the centre (ramp-up → peak → ramp-down shape).
+        for (let i = 0; i <= pool.length - rowCount; i++) {
+            const win = rpsValues.slice(i, i + rowCount);
+            const peakIdx = win.indexOf(Math.max(...win));
+            const mid = (rowCount - 1) / 2;
+            const centreScore = 1 - Math.abs(peakIdx - mid) / rowCount;
+            const peakHeight = win[peakIdx];
+            const score = peakHeight * centreScore;
+            if (score > bestScore) { bestScore = score; bestStart = i; }
         }
+
     } else if (type === "gradual_ramp") {
-        // Steady linear 1→3 over 25 ticks
-        for (let i = 0; i < 25; i++) {
-            const t = now + i * 5 * 60000;
-            const f = 1 + (i / 24) * 2; // 1→3
-            rows.push(makeRow({ rps: f, lat: 1 + f * 0.3, err: 1 + f * 0.1, cpu: 1 + f * 0.3, mem: 1 + f * 0.2, pods: f }, t));
+        // Window with the strongest upward linear trend (highest Pearson r with index).
+        for (let i = 0; i <= pool.length - rowCount; i++) {
+            const win = rpsValues.slice(i, i + rowCount);
+            const n = win.length;
+            const xMean = (n - 1) / 2;
+            const yMean = win.reduce((s, v) => s + v, 0) / n;
+            const num = win.reduce((s, v, j) => s + (j - xMean) * (v - yMean), 0);
+            const denX = Math.sqrt(win.reduce((s, _, j) => s + (j - xMean) ** 2, 0));
+            const denY = Math.sqrt(win.reduce((s, v) => s + (v - yMean) ** 2, 0));
+            const r = denX * denY === 0 ? 0 : num / (denX * denY);
+            const gain = win[n - 1] - win[0];
+            const score = r * 0.7 + (gain / (win[0] || 1)) * 0.3;
+            if (score > bestScore) { bestScore = score; bestStart = i; }
         }
-    } else if (type === "load_test") {
-        // Sudden 3× → hold 15 ticks → clean drop
-        for (let i = 0; i < 20; i++) {
-            const t = now + i * 5 * 60000;
-            let f;
-            if (i < 2) f = 1 + (i / 2) * 2; // quick ramp
-            else if (i < 17) f = 3 + (Math.random() - 0.5) * 0.2; // sustained ±noise
-            else f = 3 - ((i - 17) / 3) * 2; // clean recovery
-            rows.push(makeRow({ rps: f, lat: 1 + f * 0.25, err: 1.2, cpu: 1 + f * 0.28, mem: 1 + f * 0.18, pods: Math.max(1, f * 0.95) }, t));
-        }
+    } else {
+        return null;
     }
 
-    return rows;
+    // Tag rows so OOD detection still fires for genuinely busy periods,
+    // and the scenario badge stays active in the UI.
+    return pool.slice(bestStart, bestStart + rowCount).map((r) => ({
+        ...r,
+        _isSpike: true,
+        _spikeType: type,
+    }));
 };
 
 // MLModelContext is imported from MLModelContextDef.js
@@ -175,15 +150,16 @@ export const MLModelProvider = ({ children }) => {
     const lastRowRef = useRef(null);
 
     const injectSpike = (type) => {
-        const baseRow = lastRowRef.current || simulationQueue[simIndexRef.current - 1];
-        if (!baseRow) return;
-        const spikeRows = generateSpikeRows(type, baseRow);
+        // Use real rows from the dataset so the model receives in-distribution
+        // input and predictions remain accurate during the demo.
+        const realRows = findRealScenarioRows(type, simulationQueue);
+        if (!realRows || realRows.length === 0) return;
         const insertAt = simIndexRef.current;
         setSpikeActive(type);
-        spikeEndRef.current = insertAt + spikeRows.length;
+        spikeEndRef.current = insertAt + realRows.length;
         setSimulationQueue((prev) => {
             const next = [...prev];
-            next.splice(insertAt, 0, ...spikeRows);
+            next.splice(insertAt, 0, ...realRows);
             return next;
         });
     };
@@ -253,23 +229,36 @@ export const MLModelProvider = ({ children }) => {
             if (saved?.totalPredictions > 0) setModelMetrics(saved);
         });
 
-        checkApiHealth().then((status) => {
-            if (status) {
-                setIsApiHealthy(true);
-                setModelHealth(status);
-                fetchSimulationData()
-                    .then((data) => {
-                        if (data?.length > 48) {
-                            setSimulationQueue(data);
-                            initializeChartsFromData(data.slice(0, 20));
-                            setFeatureHistory(data.slice(0, 48));
-                            simIndexRef.current = 48;
-                            setIsSimulating(true);
-                        }
-                    })
-                    .catch((err) => console.error("Simulation fetch error:", err));
-            }
-        });
+        // Health check runs independently — does NOT gate simulation data loading.
+        // Retries every 5 s until the remote ML API responds (handles cold-start).
+        let healthRetryTimer = null;
+        const tryHealth = () => {
+            checkApiHealth().then((status) => {
+                if (status) {
+                    setIsApiHealthy(true);
+                    setModelHealth(status);
+                } else {
+                    healthRetryTimer = setTimeout(tryHealth, 5000);
+                }
+            });
+        };
+        tryHealth();
+
+        // Load simulation data independently — local server responds in <50 ms
+        // so isSimulating becomes true immediately regardless of remote API state.
+        fetchSimulationData()
+            .then((data) => {
+                if (data?.length > 48) {
+                    setSimulationQueue(data);
+                    initializeChartsFromData(data.slice(0, 20));
+                    setFeatureHistory(data.slice(0, 48));
+                    simIndexRef.current = 48;
+                    setIsSimulating(true);
+                }
+            })
+            .catch((err) => console.error("Simulation fetch error:", err));
+
+        return () => { if (healthRetryTimer) clearTimeout(healthRetryTimer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

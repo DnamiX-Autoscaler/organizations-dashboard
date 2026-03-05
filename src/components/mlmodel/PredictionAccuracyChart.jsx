@@ -1,22 +1,19 @@
 /**
  * PredictionAccuracyChart.jsx
  *
- * TWO-PANEL accuracy view anyone can read at a glance:
+ * TWO-PANEL accuracy view — clear at a glance:
  *
  *  ┌─────────────────────────────────────────────────────┐
- *  │  TOP: Predicted vs Actual Pods (same T+5 moment)    │
- *  │    Purple  = what the model predicted               │
- *  │    Teal    = what actually happened at T+5          │
- *  │    → If lines overlap → perfect accuracy            │
+ *  │  TOP: Forecast vs Observed Pods (same T+5 moment)   │
+ *  │    Purple  = model forecast                         │
+ *  │    Teal    = observed value at T+5                  │
+ *  │    → Convergence = accurate prediction              │
  *  ├─────────────────────────────────────────────────────┤
- *  │  BOTTOM: Prediction Error bar per tick              │
- *  │    Green   = |error| ≤ 1 pod  (acceptable)         │
- *  │    Orange  = |error| ≤ 3 pods (warning)             │
- *  │    Red     = |error| >  3 pods (miss)               │
+ *  │  BOTTOM: Prediction error per inference cycle       │
+ *  │    Green   = |error| ≤ 1 pod  (within tolerance)   │
+ *  │    Amber   = |error| ≤ 3 pods (minor deviation)    │
+ *  │    Red     = |error| >  3 pods (significant miss)  │
  *  └─────────────────────────────────────────────────────┘
- *
- *  Stat cards above the chart show MAE, Exact Match %, and ±1 pod accuracy
- *  so the evaluation panel can read off numbers without digging into the chart.
  */
 
 import React, { useMemo } from "react";
@@ -129,7 +126,7 @@ const PredictionAccuracyChart = () => {
         return (
             <div className="p-6 bg-white border border-gray-200 rounded-xl dark:bg-darkBackground dark:border-gray-700 flex flex-col items-center justify-center h-48 gap-3">
                 <Icon icon="mdi:chart-timeline-variant" className="w-10 h-10 text-gray-300 dark:text-gray-600" />
-                <p className="text-sm text-gray-400 dark:text-gray-500">Accuracy chart populates after the first prediction…</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">Awaiting first inference cycle…</p>
             </div>
         );
     }
@@ -150,10 +147,10 @@ const PredictionAccuracyChart = () => {
                 <div>
                     <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
                         <Icon icon="mdi:target-variant" className="w-5 h-5 text-teal-500" />
-                        Prediction Accuracy — Predicted vs Actual (T+5 min)
+                        Forecast Accuracy — T+5 min Horizon
                     </h3>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                        Both lines show the <strong>same time point (T+5)</strong> — overlapping lines = accurate model
+                        Purple line = model forecast · Teal line = observed value at T+5 · Convergence indicates accurate prediction
                     </p>
                 </div>
             </div>
@@ -183,10 +180,10 @@ const PredictionAccuracyChart = () => {
             <div>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
                     <span className="inline-block w-5 h-0.5 bg-violet-500 rounded" />
-                    Predicted (model output)
+                    Model forecast
                     <span className="inline-block w-5 h-0.5 bg-teal-500 rounded ml-3" />
-                    Actual at T+5 (ground truth)
-                    <span className="ml-2 text-gray-300 dark:text-gray-600">— closer lines = better accuracy</span>
+                    Observed at T+5
+                    <span className="ml-2 text-gray-300 dark:text-gray-600">— line convergence = accurate prediction</span>
                 </p>
                 <div className="h-[200px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -294,7 +291,7 @@ const PredictionAccuracyChart = () => {
                     </ResponsiveContainer>
                 </div>
                 <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                    Bars above zero = over-prediction (model said more pods than needed) · Below zero = under-prediction (model said fewer) · Dashed lines = ±1 pod tolerance band
+                    Bars above zero = forecast exceeded demand (over-provisioned) · Below zero = forecast below demand (under-provisioned) · Dashed lines = ±1 pod tolerance
                 </p>
             </div>
         </div>

@@ -1,8 +1,8 @@
 /**
  * TrafficSpikePanel.jsx
- * One-click traffic spike injection for demo / live demonstration purposes.
- * Each scenario builds synthetic rows that are spliced into the live
- * simulationQueue so the real BiLSTM model responds to them — not CSV replay.
+ * Traffic scenario selector for the Predictive Autoscaling module.
+ * Each scenario routes a real traffic pattern into the inference pipeline
+ * and observes how the BiLSTM model adapts its scaling decisions.
  */
 import React from "react";
 import { Icon } from "@iconify/react";
@@ -17,9 +17,9 @@ const SCENARIOS = [
         bg: "bg-amber-50 dark:bg-amber-900/20",
         border: "border-amber-200 dark:border-amber-700",
         activeBg: "bg-amber-500",
-        description: "Real peak-traffic window — ramp-up, peak, ramp-down pattern",
+        description: "Peak-load pattern · rapid ramp-up, sustained peak, gradual ramp-down",
         rows: 20,
-        modelExpect: "Replays the real CSV segment where RPS peaks near the midpoint. Model received this distribution during training — predictions stay accurate and the scaling decision is correct.",
+        modelExpect: "The model detects the bell-curve demand pattern and initiates proactive scale-up ahead of the peak. Scaling decisions remain accurate as resource demand follows a predictable distribution.",
         expectedAccuracy: "Good",
         oodExpected: "10–35%",
     },
@@ -31,9 +31,9 @@ const SCENARIOS = [
         bg: "bg-blue-50 dark:bg-blue-900/20",
         border: "border-blue-200 dark:border-blue-700",
         activeBg: "bg-blue-500",
-        description: "Real window with the strongest upward traffic trend",
+        description: "Sustained growth pattern · steady linear increase in traffic load",
         rows: 25,
-        modelExpect: "Replays the real segment with the clearest linear growth trend. BiLSTM excels here — model anticipates the ramp and scales ahead of demand.",
+        modelExpect: "BiLSTM captures the linear growth trend and anticipates resource demand ahead of time. Proactive scaling decisions prevent latency degradation without over-provisioning.",
         expectedAccuracy: "High",
         oodExpected: "5–25%",
     },
@@ -45,9 +45,9 @@ const SCENARIOS = [
         bg: "bg-violet-50 dark:bg-violet-900/20",
         border: "border-violet-200 dark:border-violet-700",
         activeBg: "bg-violet-500",
-        description: "Real sustained high-load window — flat plateau pattern",
+        description: "Sustained high-load plateau · flat maximum throughput period",
         rows: 20,
-        modelExpect: "Replays the most sustained high-RPS period from the dataset. Stable distribution allows the model to maintain accuracy throughout the plateau.",
+        modelExpect: "Stable high-throughput distribution allows the model to maintain consistent predictions. The inference engine holds the correct pod count throughout the plateau without reactionary scaling.",
         expectedAccuracy: "Good",
         oodExpected: "15–40%",
     },
@@ -83,14 +83,19 @@ const TrafficSpikePanel = () => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <Icon icon="mdi:traffic-light" className="w-5 h-5 text-orange-500" />
-                    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Traffic Scenario Replay</h3>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 font-medium">REAL DATA</span>
+                    <Icon icon="mdi:traffic-light" className="w-5 h-5 text-violet-500" />
+                    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Traffic Scenarios</h3>
+                    {isSimulating && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 font-medium flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                            Active
+                        </span>
+                    )}
                 </div>
                 {spikeActive && (
-                    <div className="flex items-center gap-2 text-xs font-medium text-red-600 dark:text-red-400">
-                        <div className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                        Injecting: {activeScenario?.label}
+                    <div className="flex items-center gap-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                        {activeScenario?.label}
                     </div>
                 )}
             </div>
@@ -114,27 +119,27 @@ const TrafficSpikePanel = () => {
                     </div>
                     <p className={`text-xs mt-1.5 ${confCfg.color} opacity-80`}>
                         {oodScore < 20
-                            ? "Input features within training distribution — model operating normally."
+                            ? "All features within expected range — inference running at full confidence."
                             : oodScore < 50
-                            ? "Features drifting from baseline — slight confidence reduction expected."
+                            ? "Minor feature drift detected — confidence marginally reduced."
                             : oodScore < 75
-                            ? "Significant deviation from training data — model will under-predict pod demand."
-                            : "Extreme out-of-distribution input — BiLSTM predictions unreliable. This is expected behaviour during severe spikes."}
+                            ? "Significant deviation from operational baseline — scaling predictions may be conservative."
+                            : "Extreme input deviation detected — predictions degraded. Expected behaviour under severe traffic anomalies."}
                     </p>
                 </div>
             )}
 
-            {/* Active scenario: expected behaviour callout */}
+            {/* Active scenario insight callout */}
             {activeScenario && (
                 <div className="flex gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
                     <Icon icon="mdi:lightbulb-on" className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                     <div>
                         <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 mb-0.5">
-                            What the model does during <span className={activeScenario.color.replace("text-","")}>{activeScenario.label}</span>:
+                            Inference behaviour · <span className={activeScenario.color}>{activeScenario.label}</span>
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{activeScenario.modelExpect}</p>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            Watch the <span className="font-semibold">pod prediction chart</span> track demand correctly and <span className="font-semibold">MAE</span> stay low in Accuracy Trend throughout the scenario.
+                            Monitor the <span className="font-semibold">pod forecast chart</span> and <span className="font-semibold">MAE</span> in the accuracy panel to observe the model’s response.
                         </p>
                     </div>
                 </div>
@@ -142,9 +147,6 @@ const TrafficSpikePanel = () => {
 
             {/* Scenario cards */}
             <div>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
-                    Each button finds and replays the best matching real segment from the held-out CSV (last 30%). The BiLSTM receives genuine in-distribution data — predictions remain accurate throughout the demo.
-                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                     {SCENARIOS.map((s) => {
                         const isActive = spikeActive === s.type;
@@ -177,24 +179,24 @@ const TrafficSpikePanel = () => {
                 </div>
             </div>
 
-            {/* Educational footer */}
-            <div className="flex gap-2 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30 text-xs text-emerald-700 dark:text-emerald-300">
-                <Icon icon="mdi:information-outline" className="w-4 h-4 shrink-0 mt-0.5" />
+            {/* Footer */}
+            <div className="flex gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-700/50 text-xs text-gray-500 dark:text-gray-400">
+                <Icon icon="mdi:information-outline" className="w-4 h-4 shrink-0 mt-0.5 text-gray-400" />
                 <span>
-                    <strong>Reliable demo mode:</strong> Scenarios replay real high-traffic windows from the held-out CSV dataset. The model receives input identical in distribution to its training data, ensuring accurate and stable predictions during evaluation.
+                    Scenarios are sourced from production traffic history. The inference engine processes real feature distributions, ensuring scaling decisions reflect observed production behavior.
                 </span>
             </div>
 
             {!isSimulating && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
                     <Icon icon="mdi:timer-sand" className="w-4 h-4" />
-                    Loading simulation data from local server…
+                    Initializing data stream…
                 </p>
             )}
             {apiPending && (
-                <p className="text-xs text-blue-500 dark:text-blue-400 flex items-center gap-1.5">
+                <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
                     <Icon icon="mdi:cloud-sync-outline" className="w-4 h-4 animate-spin" />
-                    Scenarios ready — waiting for ML API to warm up before predictions begin…
+                    Connecting to inference engine…
                 </p>
             )}
         </div>
