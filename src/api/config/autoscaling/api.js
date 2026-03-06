@@ -1,4 +1,4 @@
-import AUTOSCALING_ENDPOINTS from "./endpoind";
+import AUTOSCALING_ENDPOINTS from "./endpoint";
 
 const envBaseUrl = import.meta.env.VITE_Auto_Scaling_Base_Url;
 const BASE_URL = import.meta.env.DEV
