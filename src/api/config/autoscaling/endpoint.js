@@ -18,6 +18,9 @@ const AUTOSCALING_ENDPOINTS = {
     DEPLOYMENT_HEALTH: {
         REPORT: "/deployment-health/report",
         STREAM: "/events/deployment-health"
+    },
+    SCALE_WITH_METRICS: {
+        GET: "/scale-with-metrics"
     }
 };
 

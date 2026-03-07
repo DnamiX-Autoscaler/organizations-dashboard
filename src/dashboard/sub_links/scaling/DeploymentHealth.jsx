@@ -1,20 +1,13 @@
 import React, { useState } from "react";
 import { Icon } from "@iconify/react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import deploymentHealthData from "../../../data/deploymentHealthData";
 import ServiceMetricsGroup from "./ServiceMetricsGroup";
-
-import { useDeploymentHealthSSE } from "../../../hooks/useDeploymentHealthSSE";
+import { useScaleWithMetrics } from "../../../hooks/useScaleWithMetrics";
 
 const DeploymentHealth = () => {
-    const healthData = useDeploymentHealthSSE([]);
+    const { data: deployments, loading, error, hasMore, loadMore, refresh } = useScaleWithMetrics();
     const [selectedDeployment, setSelectedDeployment] = useState(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-
-    // Handle array data from API or fallback to single object structure
-    const deployments = Array.isArray(healthData) && healthData.length > 0 
-        ? healthData 
-        : (healthData && !Array.isArray(healthData) ? [healthData] : []);
 
     const handleViewDetails = (deployment) => {
         setSelectedDeployment(deployment);
@@ -57,6 +50,18 @@ const DeploymentHealth = () => {
         }
     };
 
+    const getHealthColor = (score) => {
+        if (score >= 90) return "text-green-600 dark:text-green-400";
+        if (score >= 70) return "text-yellow-600 dark:text-yellow-400";
+        return "text-red-600 dark:text-red-400";
+    };
+
+    const getHealthBg = (score) => {
+        if (score >= 90) return "bg-green-100 dark:bg-green-900/30";
+        if (score >= 70) return "bg-yellow-100 dark:bg-yellow-900/30";
+        return "bg-red-100 dark:bg-red-900/30";
+    };
+
     return (
         <div className="flex flex-col h-full space-y-6">
             {/* Header */}
@@ -76,6 +81,14 @@ const DeploymentHealth = () => {
                             {deployments.length} Record{deployments.length !== 1 ? 's' : ''}
                         </span>
                     </div>
+                    <button
+                        onClick={refresh}
+                        disabled={loading}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
+                        title="Refresh"
+                    >
+                        <Icon icon="mdi:refresh" className={`w-5 h-5 text-gray-600 dark:text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
                 </div>
             </div>
 
@@ -98,7 +111,14 @@ const DeploymentHealth = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                            {deployments.length === 0 ? (
+                            {deployments.length === 0 && loading ? (
+                                <tr>
+                                    <td colSpan="10" className="px-5 py-8 text-center text-gray-500 dark:text-gray-400">
+                                        <Icon icon="mdi:loading" className="w-12 h-12 mx-auto mb-2 animate-spin text-primary" />
+                                        <p>Loading deployment health data...</p>
+                                    </td>
+                                </tr>
+                            ) : deployments.length === 0 ? (
                                 <tr>
                                     <td colSpan="10" className="px-5 py-8 text-center text-gray-500 dark:text-gray-400">
                                         <Icon icon="mdi:database-off" className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -111,18 +131,6 @@ const DeploymentHealth = () => {
                                     const totalRestarts = (deployment.restarts || []).reduce((sum, r) => sum + (r.count || 0), 0);
                                     const crashLoopCount = (deployment.crashLoopBackOff || []).length;
                                     const healthScore = deployment.overallScore || 0;
-                                    
-                                    const getHealthColor = (score) => {
-                                        if (score >= 90) return "text-green-600 dark:text-green-400";
-                                        if (score >= 70) return "text-yellow-600 dark:text-yellow-400";
-                                        return "text-red-600 dark:text-red-400";
-                                    };
-
-                                    const getHealthBg = (score) => {
-                                        if (score >= 90) return "bg-green-100 dark:bg-green-900/30";
-                                        if (score >= 70) return "bg-yellow-100 dark:bg-yellow-900/30";
-                                        return "bg-red-100 dark:bg-red-900/30";
-                                    };
 
                                     return (
                                         <tr key={deployment._id || idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
@@ -174,9 +182,9 @@ const DeploymentHealth = () => {
                                                     className="p-2 hover:bg-primary/10 rounded-lg transition-colors group"
                                                     title="View Details"
                                                 >
-                                                    <Icon 
-                                                        icon="mdi:eye" 
-                                                        className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" 
+                                                    <Icon
+                                                        icon="mdi:eye"
+                                                        className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors"
                                                     />
                                                 </button>
                                             </td>
@@ -187,17 +195,68 @@ const DeploymentHealth = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Controls - Next Button */}
+                {hasMore && (
+                    <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-4">
+                        <div className="flex items-center justify-between">
+                            {/* Showing records info */}
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                                Showing <span className="font-medium text-gray-900 dark:text-white">{deployments.length}</span> records
+                            </div>
+
+                            {/* Next button */}
+                            <button
+                                onClick={loadMore}
+                                disabled={loading}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                    loading
+                                        ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
+                                        : 'bg-primary text-white hover:bg-primary/90'
+                                }`}
+                            >
+                                {loading ? (
+                                    <>
+                                        <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" />
+                                        <span>Loading...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>Next</span>
+                                        <Icon icon="mdi:arrow-right" className="w-5 h-5" />
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Error Message */}
+                {error && (
+                    <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-4">
+                        <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                            <Icon icon="mdi:alert-circle" className="w-5 h-5" />
+                            <span className="text-sm">{error}</span>
+                            <button
+                                onClick={refresh}
+                                className="ml-auto text-sm font-medium hover:underline"
+                            >
+                                Retry
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Right Drawer for Detailed View */}
             {isDrawerOpen && (
                 <>
                     {/* Backdrop */}
-                    <div 
+                    <div
                         className="fixed inset-0 bg-black/50 z-40 transition-opacity"
                         onClick={closeDrawer}
                     />
-                    
+
                     {/* Drawer */}
                     <div className={`fixed top-0 right-0 h-full w-full md:w-3/4 lg:w-2/3 xl:w-1/2 bg-white dark:bg-darkBackground shadow-2xl z-50 transform transition-transform duration-300 overflow-y-auto ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                         {/* Drawer Header */}
@@ -227,7 +286,7 @@ const DeploymentHealth = () => {
                         <div className="p-6 space-y-6">
                             {/* Health Score Section */}
                             <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <div className={`w-16 h-16 rounded-full border-4 border-primary flex items-center justify-center`}>
+                                <div className="w-16 h-16 rounded-full border-4 border-primary flex items-center justify-center">
                                     <span className="text-lg font-bold text-primary">{overallScore}</span>
                                 </div>
                                 <div>

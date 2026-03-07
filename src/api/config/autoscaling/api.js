@@ -115,3 +115,39 @@ export const publishAlert = async (alertData) => {
         throw err;
     }
 };
+
+/**
+ * Get scale with metrics data with pagination
+ * @param {Object} options - Pagination options
+ * @param {number} options.page - Page number (default: 1)
+ * @param {number} options.limit - Records per page (default: 10)
+ * 
+ * @example
+ * // Get paginated records
+ * getScaleWithMetrics({ page: 1, limit: 10 })
+ */
+export const getScaleWithMetrics = async (options = {}) => {
+    const { page = 1, limit = 10 } = options;
+    
+    try {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString()
+        });
+        
+        const url = `${BASE_URL}${AUTOSCALING_ENDPOINTS.SCALE_WITH_METRICS.GET}?${params}`;
+        console.log(`📊 Fetching scale with metrics: ${url}`);
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return data;
+    } catch (err) {
+        console.error("Error fetching scale with metrics:", err);
+        throw err;
+    }
+};
