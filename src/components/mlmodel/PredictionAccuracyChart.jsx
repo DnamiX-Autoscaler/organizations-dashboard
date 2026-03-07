@@ -45,7 +45,7 @@ const TopTooltip = ({ active, payload, label }) => {
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-1.5">
                         <div className="w-3 h-0 border-t-2 border-dashed border-violet-500" />
-                        <span className="text-gray-500 dark:text-gray-400">AI Forecast (at T)</span>
+                        <span className="text-gray-500 dark:text-gray-400">Predicted Demand</span>
                     </div>
                     <span className="font-bold text-violet-600 dark:text-violet-300">{pred.value} pods</span>
                 </div>
@@ -54,7 +54,7 @@ const TopTooltip = ({ active, payload, label }) => {
                 <div className="flex items-center justify-between gap-4 mt-1">
                     <div className="flex items-center gap-1.5">
                         <div className="w-3 h-0.5 bg-teal-500 rounded" />
-                        <span className="text-gray-500 dark:text-gray-400">Ground Truth (T+5)</span>
+                        <span className="text-gray-500 dark:text-gray-400">Actual Demand</span>
                     </div>
                     <span className="font-bold text-teal-600 dark:text-teal-300">{truth.value} pods</span>
                 </div>
@@ -189,20 +189,21 @@ const PredictionAccuracyChart = () => {
                         Forecast Accuracy — 5-Minute Horizon
                     </h3>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 leading-relaxed">
-                        AI forecasts generated at time <span className="font-medium text-gray-500 dark:text-gray-400">T</span> are validated against the
-                        actual workload demand observed five minutes later <span className="font-medium text-gray-500 dark:text-gray-400">(T+5)</span>.
+                        Each point compares the AI prediction against what actually happened — both
+                        at the <span className="font-medium text-gray-500 dark:text-gray-400">same future moment (T+5)</span>.
+                        The prediction was made 5 minutes earlier; the actual value is observed when that moment arrives.
                     </p>
                     <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5 flex items-center gap-x-4 flex-wrap">
                         <span className="flex items-center gap-1.5">
                             <span className="inline-block w-4 h-0 border-t-2 border-dashed border-violet-500" />
-                            AI Forecast
+                            Predicted Demand
                         </span>
                         <span className="flex items-center gap-1.5">
                             <span className="inline-block w-4 h-0.5 bg-teal-500 rounded" />
                             Actual Demand
                         </span>
                         <span className="text-gray-300 dark:text-gray-600">—</span>
-                        <span>Overlapping lines indicate accurate prediction</span>
+                        <span>Overlapping lines = accurate prediction</span>
                     </p>
                 </div>
                 <button
@@ -241,12 +242,12 @@ const PredictionAccuracyChart = () => {
             <div>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5 flex-wrap">
                     <span className="inline-block w-5 h-0 border-t-2 border-dashed border-violet-500" />
-                    AI Forecast (made at T)
+                    Predicted Demand (what AI forecasted)
                     <span className="inline-block w-5 h-0.5 bg-teal-500 rounded ml-3" />
-                    Ground Truth (at T+5)
+                    Actual Demand (what really happened)
                     <span className="inline-block w-5 h-0 border-t-2 border-dashed border-orange-400 ml-3" />
                     HPA Reactive
-                    <span className="ml-2 text-gray-300 dark:text-gray-600">— lines converging = accurate prediction</span>
+                    <span className="ml-2 text-gray-300 dark:text-gray-600">— both at the same T+5 moment</span>
                 </p>
                 <div className="h-[200px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -286,7 +287,7 @@ const PredictionAccuracyChart = () => {
                                 dataKey="actualAtT5"
                                 stroke="#14b8a6"
                                 strokeWidth={2.5}
-                                name="Ground Truth (T+5)"
+                                name="Actual Demand"
                                 dot={{ r: 3, fill: "#14b8a6", stroke: "#fff", strokeWidth: 1.5 }}
                                 activeDot={{ r: 6 }}
                                 animationDuration={300}
@@ -297,7 +298,7 @@ const PredictionAccuracyChart = () => {
                                 stroke="#8b5cf6"
                                 strokeWidth={2.5}
                                 strokeDasharray="7 4"
-                                name="AI Forecast"
+                                name="Predicted Demand"
                                 dot={{ r: 3, fill: "#8b5cf6", stroke: "#fff", strokeWidth: 1.5 }}
                                 activeDot={{ r: 6 }}
                                 animationDuration={300}

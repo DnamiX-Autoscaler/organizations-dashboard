@@ -35,9 +35,9 @@ const ForecastDot = ({ cx, cy, payload, color }) => {
 
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
-    const actual    = payload.find((p) => p.dataKey === "actual");
+    const actual = payload.find((p) => p.dataKey === "actual");
     const predicted = payload.find((p) => p.dataKey === "predicted");
-    const hpa       = payload.find((p) => p.dataKey === "hpa");
+    const hpa = payload.find((p) => p.dataKey === "hpa");
     return (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm min-w-[200px]">
             <p className="font-semibold text-gray-700 dark:text-gray-200 mb-2">{label}</p>
@@ -68,6 +68,15 @@ const CustomTooltip = ({ active, payload, label }) => {
                     <span className="font-bold text-emerald-600 dark:text-emerald-400">{predicted.value} pods</span>
                 </div>
             )}
+            {actual?.value != null && hpa?.value != null && actual.value > hpa.value && (
+                <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center gap-1.5 text-xs">
+                        <div className="w-3 h-2.5 rounded-sm bg-red-400/40" />
+                        <span className="font-semibold text-red-500">HPA Latency Gap: {actual.value - hpa.value} pod{actual.value - hpa.value !== 1 ? 's' : ''}</span>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Under-provisioned during HPA reaction delay</p>
+                </div>
+            )}
         </div>
     );
 };
@@ -85,9 +94,16 @@ const PodCountChart = ({ data = [] }) => {
     const predictedPods = data[data.length - 1]?.predicted ?? 0;
     const delta = predictedPods - currentPods;
 
-    const allValues = data?.flatMap(d => [d.actual, d.predicted]).filter(v => v != null) || [0];
+    const allValues = data?.flatMap(d => [d.actual, d.predicted, d.hpa]).filter(v => v != null) || [0];
     const minVal = Math.max(0, Math.min(...allValues) - 2);
     const maxVal = Math.max(...allValues) + 3;
+
+    // Compute HPA latency gap: where actual > hpa (HPA hasn't caught up yet)
+    const chartData = data.map(d => ({
+        ...d,
+        hpaGap: (d.actual != null && d.hpa != null && d.actual > d.hpa) ? d.actual : null,
+        hpaGapBase: (d.actual != null && d.hpa != null && d.actual > d.hpa) ? d.hpa : null,
+    }));
 
     const deltaColor = delta > 0 ? "text-orange-500" : delta < 0 ? "text-sky-500" : "text-emerald-500";
     const deltaIcon = delta > 0 ? "mdi:arrow-up-bold" : delta < 0 ? "mdi:arrow-down-bold" : "mdi:minus";
@@ -101,8 +117,12 @@ const PodCountChart = ({ data = [] }) => {
                         <Icon icon="mdi:chart-timeline-variant" className="w-5 h-5 text-violet-500" />
                         Pod Count Prediction
                     </h3>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 leading-relaxed">
                         Solid = running now · Dashed green = AI proactive forecast (+5 min) · Dashed orange = reactive HPA baseline
+                    </p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1.5">
+                        <span className="inline-block w-3 h-2 rounded-sm bg-red-400/40 border border-red-300/50" />
+                        <span>Red shading = HPA latency gap (under-provisioned during reaction delay)</span>
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -118,21 +138,19 @@ const PodCountChart = ({ data = [] }) => {
                         <span className="text-[10px] text-emerald-400">pods</span>
                     </div>
                     {/* Confidence badge */}
-                    <div className={`flex flex-col items-center px-3 py-1.5 rounded-lg border ${
-                        modelConfidence === "High" ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/40" :
+                    <div className={`flex flex-col items-center px-3 py-1.5 rounded-lg border ${modelConfidence === "High" ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/40" :
                         modelConfidence === "Medium" ? "bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800/40" :
-                        modelConfidence === "Low" ? "bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800/40" :
-                        "bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800/40"
-                    }`}>
+                            modelConfidence === "Low" ? "bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800/40" :
+                                "bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800/40"
+                        }`}>
                         <span className="text-[10px] font-medium uppercase tracking-wide text-gray-500">Conf.</span>
                         <div className="flex items-center gap-1 mt-0.5">
                             <div className={`w-2 h-2 rounded-full ${confCfg.dot} ${modelConfidence === "Critical" ? "animate-ping" : ""}`} />
-                            <span className={`text-xs font-bold ${
-                                modelConfidence === "High" ? "text-emerald-600 dark:text-emerald-300" :
+                            <span className={`text-xs font-bold ${modelConfidence === "High" ? "text-emerald-600 dark:text-emerald-300" :
                                 modelConfidence === "Medium" ? "text-amber-600 dark:text-amber-300" :
-                                modelConfidence === "Low" ? "text-orange-600 dark:text-orange-300" :
-                                "text-red-600 dark:text-red-300"
-                            }`}>{modelConfidence}</span>
+                                    modelConfidence === "Low" ? "text-orange-600 dark:text-orange-300" :
+                                        "text-red-600 dark:text-red-300"
+                                }`}>{modelConfidence}</span>
                         </div>
                         <span className="text-[10px] text-gray-400">{oodScore}% OOD</span>
                     </div>
@@ -142,7 +160,7 @@ const PodCountChart = ({ data = [] }) => {
             {/* Chart */}
             <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <defs>
                             <linearGradient id="gradActual" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.25} />
@@ -207,6 +225,30 @@ const PodCountChart = ({ data = [] }) => {
                             stroke="none"
                             animationDuration={400}
                             connectNulls={false}
+                        />
+
+                        {/* HPA Latency Gap — red shaded area where actual > hpa */}
+                        <Area
+                            type="monotone"
+                            dataKey="hpaGap"
+                            fill="#ef4444"
+                            fillOpacity={0.15}
+                            stroke="#ef4444"
+                            strokeWidth={0}
+                            animationDuration={400}
+                            connectNulls={false}
+                            legendType="none"
+                            name="HPA Latency Gap"
+                        />
+                        <Area
+                            type="monotone"
+                            dataKey="hpaGapBase"
+                            fill="#ffffff"
+                            fillOpacity={0}
+                            stroke="none"
+                            animationDuration={400}
+                            connectNulls={false}
+                            legendType="none"
                         />
 
                         {/* Actual pods — solid violet */}
@@ -284,6 +326,10 @@ const PodCountChart = ({ data = [] }) => {
                 <div className="flex items-center gap-1.5">
                     <div className="w-8 h-0 border-t-2 border-dashed border-orange-400" />
                     <span>HPA Reactive Baseline</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-8 h-2 rounded-sm bg-red-400/30 border border-red-300/50" />
+                    <span>HPA Latency Gap</span>
                 </div>
                 {delta !== 0 && (
                     <span className={`ml-auto font-semibold ${deltaColor}`}>
