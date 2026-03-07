@@ -35,25 +35,35 @@ const ForecastDot = ({ cx, cy, payload, color }) => {
 
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
-    const actual = payload.find((p) => p.dataKey === "actual");
+    const actual    = payload.find((p) => p.dataKey === "actual");
     const predicted = payload.find((p) => p.dataKey === "predicted");
+    const hpa       = payload.find((p) => p.dataKey === "hpa");
     return (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm min-w-[160px]">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm min-w-[200px]">
             <p className="font-semibold text-gray-700 dark:text-gray-200 mb-2">{label}</p>
             {actual?.value != null && (
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-1.5">
                         <div className="w-3 h-1 rounded-full bg-violet-500" />
-                        <span className="text-gray-500 dark:text-gray-400">Actual</span>
+                        <span className="text-gray-500 dark:text-gray-400">Running Now</span>
                     </div>
                     <span className="font-bold text-violet-600 dark:text-violet-400">{actual.value} pods</span>
+                </div>
+            )}
+            {hpa?.value != null && (
+                <div className="flex items-center justify-between gap-4 mt-1">
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-0 border-t-2 border-dashed border-orange-400" />
+                        <span className="text-gray-500 dark:text-gray-400">HPA Reactive</span>
+                    </div>
+                    <span className="font-bold text-orange-500 dark:text-orange-400">{hpa.value} pods</span>
                 </div>
             )}
             {predicted?.value != null && (
                 <div className="flex items-center justify-between gap-4 mt-1">
                     <div className="flex items-center gap-1.5">
                         <div className="w-3 h-0 border-t-2 border-dashed border-emerald-500" />
-                        <span className="text-gray-500 dark:text-gray-400">Forecast</span>
+                        <span className="text-gray-500 dark:text-gray-400">AI Forecast (+5 min)</span>
                     </div>
                     <span className="font-bold text-emerald-600 dark:text-emerald-400">{predicted.value} pods</span>
                 </div>
@@ -92,7 +102,7 @@ const PodCountChart = ({ data = [] }) => {
                         Pod Count Prediction
                     </h3>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                        Solid = live pod count · Dashed = 5-min forecast
+                        Solid = running now · Dashed green = AI proactive forecast (+5 min) · Dashed orange = reactive HPA baseline
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -228,10 +238,24 @@ const PodCountChart = ({ data = [] }) => {
                             dataKey="predicted"
                             stroke="#10b981"
                             strokeWidth={2.5}
-                            name="Forecast (+5min)"
+                            name="AI Forecast (+5min)"
                             strokeDasharray="7 4"
                             dot={<ForecastDot color="#10b981" />}
                             activeDot={{ r: 6, fill: "#10b981", stroke: "#fff", strokeWidth: 2 }}
+                            connectNulls={false}
+                            animationDuration={400}
+                        />
+
+                        {/* HPA Reactive baseline — dashed orange, historical only */}
+                        <Line
+                            type="monotone"
+                            dataKey="hpa"
+                            stroke="#f97316"
+                            strokeWidth={2}
+                            name="HPA Reactive"
+                            strokeDasharray="4 6"
+                            dot={false}
+                            activeDot={{ r: 5, fill: "#f97316", stroke: "#fff", strokeWidth: 2 }}
                             connectNulls={false}
                             animationDuration={400}
                         />
@@ -251,19 +275,19 @@ const PodCountChart = ({ data = [] }) => {
             <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-700/50 pt-3">
                 <div className="flex items-center gap-1.5">
                     <div className="w-8 h-0.5 bg-violet-500 rounded" />
-                    <span>Actual (live data)</span>
+                    <span>Running Now (live pods)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                     <div className="w-8 h-0 border-t-2 border-dashed border-emerald-500" />
-                    <span>BiLSTM forecast</span>
+                    <span>AI Proactive Forecast (+5 min)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-4 h-4 rounded bg-emerald-500/10 border border-emerald-300/40" />
-                    <span>5-min forecast window</span>
+                    <div className="w-8 h-0 border-t-2 border-dashed border-orange-400" />
+                    <span>HPA Reactive Baseline</span>
                 </div>
                 {delta !== 0 && (
                     <span className={`ml-auto font-semibold ${deltaColor}`}>
-                        {delta > 0 ? "+" : ""}{delta} pod{Math.abs(delta) !== 1 ? "s" : ""} forecast
+                        AI: {delta > 0 ? "+" : ""}{delta} pod{Math.abs(delta) !== 1 ? "s" : ""} {delta > 0 ? "ahead" : "below"}
                     </span>
                 )}
             </div>

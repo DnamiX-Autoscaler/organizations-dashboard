@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const ML_API_URL  = "https://mlapi-b3h4fpduauancfcg.southeastasia-01.azurewebsites.net";
+// Read from .env (VITE_ML_API_URL) — change the env var instead of editing source.
+const ML_API_URL  = import.meta.env.VITE_ML_API_URL ?? "https://mlapi-b3h4fpduauancfcg.southeastasia-01.azurewebsites.net";
 const LOCAL_URL   = "http://localhost:5000";   // local Express server
 
 // Check API health — generous 15 s timeout to survive cold-start
@@ -28,7 +29,7 @@ export const predictPodScaling = async (windowData, windowEndUtc) => {
       window_data: windowData,
     };
 
-    const response = await axios.post(`${ML_API_URL}/predict`, payload, { timeout: 5000 });
+    const response = await axios.post(`${ML_API_URL}/predict`, payload, { timeout: 20000 });
     return response.data;
   } catch (error) {
     console.error("ML API Prediction Failed:", error.message);

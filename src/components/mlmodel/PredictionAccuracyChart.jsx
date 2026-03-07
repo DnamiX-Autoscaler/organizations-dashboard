@@ -33,18 +33,19 @@ import useMLModel from "../../services/useMLModel";
 
 const TopTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
-    const pred  = payload.find((p) => p.dataKey === "predicted");
+    const pred = payload.find((p) => p.dataKey === "predicted");
     const truth = payload.find((p) => p.dataKey === "actualAtT5");
-    const err   = (pred?.value != null && truth?.value != null)
+    const hpa = payload.find((p) => p.dataKey === "hpaPods");
+    const err = (pred?.value != null && truth?.value != null)
         ? pred.value - truth.value : null;
     return (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm min-w-[180px]">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm min-w-[200px]">
             <p className="font-semibold text-gray-700 dark:text-gray-200 mb-2">{label}</p>
             {pred?.value != null && (
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-1.5">
                         <div className="w-3 h-0 border-t-2 border-dashed border-violet-500" />
-                        <span className="text-gray-500 dark:text-gray-400">Predicted</span>
+                        <span className="text-gray-500 dark:text-gray-400">AI Forecast (at T)</span>
                     </div>
                     <span className="font-bold text-violet-600 dark:text-violet-300">{pred.value} pods</span>
                 </div>
@@ -53,9 +54,18 @@ const TopTooltip = ({ active, payload, label }) => {
                 <div className="flex items-center justify-between gap-4 mt-1">
                     <div className="flex items-center gap-1.5">
                         <div className="w-3 h-0.5 bg-teal-500 rounded" />
-                        <span className="text-gray-500 dark:text-gray-400">Actual (T+5)</span>
+                        <span className="text-gray-500 dark:text-gray-400">Ground Truth (T+5)</span>
                     </div>
                     <span className="font-bold text-teal-600 dark:text-teal-300">{truth.value} pods</span>
+                </div>
+            )}
+            {hpa?.value != null && (
+                <div className="flex items-center justify-between gap-4 mt-1">
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-0 border-t-2 border-dashed border-orange-400" />
+                        <span className="text-gray-500 dark:text-gray-400">HPA Reactive</span>
+                    </div>
+                    <span className="font-bold text-orange-500 dark:text-orange-400">{hpa.value} pods</span>
                 </div>
             )}
             {err != null && (
@@ -118,15 +128,15 @@ const PredictionAccuracyChart = () => {
         const evaluable = displayLog.filter((d) => !d.transition);
         if (!evaluable.length) return null;
         const errors = evaluable.map((d) => d.error);
-        const abs    = errors.map(Math.abs);
-        const mae    = abs.reduce((s, v) => s + v, 0) / abs.length;
-        const exact  = errors.filter((e) => e === 0).length;
+        const abs = errors.map(Math.abs);
+        const mae = abs.reduce((s, v) => s + v, 0) / abs.length;
+        const exact = errors.filter((e) => e === 0).length;
         const within1 = abs.filter((e) => e <= 1).length;
         const n = errors.length;
         const transitionCount = displayLog.length - n;
         return {
             mae: mae.toFixed(2),
-            exactPct: ((exact  / n) * 100).toFixed(1),
+            exactPct: ((exact / n) * 100).toFixed(1),
             within1Pct: ((within1 / n) * 100).toFixed(1),
             n,
             transitionCount,
@@ -143,12 +153,30 @@ const PredictionAccuracyChart = () => {
     }
 
     // Y-axis domains
-    const allPods = displayLog.flatMap((d) => [d.predicted, d.actualAtT5]).filter(Boolean);
-    const podMin  = Math.max(0, Math.min(...allPods) - 2);
-    const podMax  = Math.max(...allPods) + 3;
+    const allPods = displayLog.flatMap((d) => [d.predicted, d.actualAtT5, d.hpaPods]).filter(Boolean);
+    const podMin = Math.max(0, Math.min(...allPods) - 2);
+    const podMax = Math.max(...allPods) + 3;
 
     const allErrors = displayLog.map((d) => d.error);
-    const errAbs    = Math.max(4, Math.ceil(Math.max(...allErrors.map(Math.abs))) + 1);
+    const errAbs = Math.max(4, Math.ceil(Math.max(...allErrors.map(Math.abs))) + 1);
+
+    // Download the full prediction log (not just the displayed 40) as a CSV file.
+    const exportCsv = () => {
+        if (!predictionLog.length) return;
+        const headers = ["time", "currentPods", "predicted", "actualAtT5", "error", "hpaPods", "transition"];
+        const rows = predictionLog.map((d) => [
+            d.time, d.currentPods, d.predicted, d.actualAtT5,
+            d.error, d.hpaPods ?? "", d.transition ? "1" : "0",
+        ]);
+        const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `prediction-log-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
 
     return (
         <div className="p-6 bg-white border border-gray-200 rounded-xl dark:bg-darkBackground dark:border-gray-700 space-y-5">
@@ -158,12 +186,34 @@ const PredictionAccuracyChart = () => {
                 <div>
                     <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
                         <Icon icon="mdi:target-variant" className="w-5 h-5 text-teal-500" />
-                        Forecast Accuracy — T+5 min Horizon
+                        Forecast Accuracy — 5-Minute Horizon
                     </h3>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                        Purple line = model forecast · Teal line = observed value at T+5 · Convergence indicates accurate prediction
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 leading-relaxed">
+                        AI forecasts generated at time <span className="font-medium text-gray-500 dark:text-gray-400">T</span> are validated against the
+                        actual workload demand observed five minutes later <span className="font-medium text-gray-500 dark:text-gray-400">(T+5)</span>.
+                    </p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5 flex items-center gap-x-4 flex-wrap">
+                        <span className="flex items-center gap-1.5">
+                            <span className="inline-block w-4 h-0 border-t-2 border-dashed border-violet-500" />
+                            AI Forecast
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <span className="inline-block w-4 h-0.5 bg-teal-500 rounded" />
+                            Actual Demand
+                        </span>
+                        <span className="text-gray-300 dark:text-gray-600">—</span>
+                        <span>Overlapping lines indicate accurate prediction</span>
                     </p>
                 </div>
+                <button
+                    onClick={exportCsv}
+                    disabled={!predictionLog.length}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+                    title="Download full prediction log as CSV"
+                >
+                    <Icon icon="mdi:download" className="w-3.5 h-3.5" />
+                    Export CSV
+                </button>
             </div>
 
             {/* ── Stat cards ──────────────────────────────────── */}
@@ -189,12 +239,14 @@ const PredictionAccuracyChart = () => {
 
             {/* ── TOP chart: Predicted vs Actual ──────────────── */}
             <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
-                    <span className="inline-block w-5 h-0.5 bg-violet-500 rounded" />
-                    Model forecast
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5 flex-wrap">
+                    <span className="inline-block w-5 h-0 border-t-2 border-dashed border-violet-500" />
+                    AI Forecast (made at T)
                     <span className="inline-block w-5 h-0.5 bg-teal-500 rounded ml-3" />
-                    Observed at T+5
-                    <span className="ml-2 text-gray-300 dark:text-gray-600">— line convergence = accurate prediction</span>
+                    Ground Truth (at T+5)
+                    <span className="inline-block w-5 h-0 border-t-2 border-dashed border-orange-400 ml-3" />
+                    HPA Reactive
+                    <span className="ml-2 text-gray-300 dark:text-gray-600">— lines converging = accurate prediction</span>
                 </p>
                 <div className="h-[200px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -234,7 +286,7 @@ const PredictionAccuracyChart = () => {
                                 dataKey="actualAtT5"
                                 stroke="#14b8a6"
                                 strokeWidth={2.5}
-                                name="Actual (T+5)"
+                                name="Ground Truth (T+5)"
                                 dot={{ r: 3, fill: "#14b8a6", stroke: "#fff", strokeWidth: 1.5 }}
                                 activeDot={{ r: 6 }}
                                 animationDuration={300}
@@ -245,9 +297,20 @@ const PredictionAccuracyChart = () => {
                                 stroke="#8b5cf6"
                                 strokeWidth={2.5}
                                 strokeDasharray="7 4"
-                                name="Predicted"
+                                name="AI Forecast"
                                 dot={{ r: 3, fill: "#8b5cf6", stroke: "#fff", strokeWidth: 1.5 }}
                                 activeDot={{ r: 6 }}
+                                animationDuration={300}
+                            />
+                            <Line
+                                type="monotone"
+                                dataKey="hpaPods"
+                                stroke="#f97316"
+                                strokeWidth={2}
+                                strokeDasharray="5 5"
+                                name="HPA Reactive"
+                                dot={false}
+                                activeDot={{ r: 5, fill: "#f97316", stroke: "#fff", strokeWidth: 2 }}
                                 animationDuration={300}
                             />
                             <Legend
@@ -292,7 +355,7 @@ const PredictionAccuracyChart = () => {
                             />
                             <Tooltip content={<BottomTooltip />} />
                             <ReferenceLine y={0} stroke="#6b7280" strokeWidth={1.5} />
-                            <ReferenceLine y={1}  stroke="#10b981" strokeDasharray="4 3" strokeOpacity={0.5} />
+                            <ReferenceLine y={1} stroke="#10b981" strokeDasharray="4 3" strokeOpacity={0.5} />
                             <ReferenceLine y={-1} stroke="#10b981" strokeDasharray="4 3" strokeOpacity={0.5} />
                             <Bar dataKey="error" radius={[3, 3, 0, 0]}>
                                 {displayLog.map((entry, i) => (

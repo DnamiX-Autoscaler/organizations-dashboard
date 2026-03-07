@@ -4,12 +4,7 @@
  * mlmodel sub-pages without restarting when the user navigates.
  */
 import React, { useState, useEffect, useRef } from "react";
-import { MLModelContext } from "./MLModelContextDef";import {
-    getPodCountData,
-    getResourceMetricsData,
-    getPerformanceMetricsData,
-    getProvisioningEfficiencyData,
-} from "../components/mlmodel/DataGenerator";
+import { MLModelContext } from "./MLModelContextDef";
 import { fetchSimulationData, checkApiHealth, predictPodScaling, fetchScenarioCandidates } from "./mlModelService";
 import {
     loadPredictions, savePrediction, clearPredictions,
@@ -44,7 +39,9 @@ const SIMULATION_INTERVAL_MS = 10000; // 10 s per tick — each CSV row = 1 min 
 // model quality.  These ticks are recorded in the log (full transparency)
 // but are EXCLUDED from MAE / exact-match / within±1 calculations.
 // ---------------------------------------------------------------------------
-const SIM_START_OFFSET = 100;    // first row index used as current tick (pods≈2, stable zone)
+// Randomise simulation start within a known stable zone (rows 80–399 of the simulation
+// queue). Different on every page load so repeated demos don't start identically.
+const SIM_START_OFFSET = 80 + Math.floor(Math.random() * 320);
 const TRANSITION_SKIP_THRESHOLD = 3; // |T+5 pod delta| above which tick is excluded
 
 // ---------------------------------------------------------------------------
@@ -138,11 +135,19 @@ const findRealScenarioRows = (type, queue, currentPodCount = 2) => {
             patternScore = avg - std * 0.5;
 
         } else if (type === "flash_sale") {
-            // Peak close to window centre → bell shape
+            // Bell shape: peak near centre + genuine rise on the left + genuine fall on the right
             const peakIdx = rpsWin.indexOf(Math.max(...rpsWin));
             const mid = (n - 1) / 2;
             const centreScore = 1 - Math.abs(peakIdx - mid) / n;
-            patternScore = rpsWin[peakIdx] * centreScore;
+            // Rise: how much the signal climbs from start to peak (0-1)
+            const riseScore = peakIdx > 0
+                ? (rpsWin[peakIdx] - rpsWin[0]) / (rpsWin[peakIdx] || 1)
+                : 0;
+            // Fall: how much the signal drops from peak to end (0-1)
+            const fallScore = peakIdx < n - 1
+                ? (rpsWin[peakIdx] - rpsWin[n - 1]) / (rpsWin[peakIdx] || 1)
+                : 0;
+            patternScore = rpsWin[peakIdx] * (centreScore * 0.4 + riseScore * 0.3 + fallScore * 0.3);
 
         } else if (type === "gradual_ramp") {
             // Strongest upward linear trend
@@ -181,11 +186,12 @@ const findRealScenarioRows = (type, queue, currentPodCount = 2) => {
 // hook lives in useMLModel.js to satisfy Fast Refresh constraints
 
 export const MLModelProvider = ({ children }) => {
-    // Charts
-    const [podData, setPodData] = useState(getPodCountData());
-    const [resourceData, setResourceData] = useState(getResourceMetricsData());
-    const [performanceData, setPerformanceData] = useState(getPerformanceMetricsData());
-    const [efficiencyData, setEfficiencyData] = useState(getProvisioningEfficiencyData());
+    // Charts — start empty; real data populates from CSV within ~50ms of mount.
+    // Avoids a brief flash of synthetic sinusoidal placeholder data.
+    const [podData, setPodData] = useState([]);
+    const [resourceData, setResourceData] = useState([]);
+    const [performanceData, setPerformanceData] = useState([]);
+    const [efficiencyData, setEfficiencyData] = useState([]);
 
     // Connection / simulation
     const [simulationQueue, setSimulationQueue] = useState([]);
@@ -231,6 +237,19 @@ export const MLModelProvider = ({ children }) => {
     // spike is running so the model always receives in-distribution input.
     const activeScenarioContextRef = useRef(null); // { type, contextRows, spikeStartIdx }
     const lastRowRef = useRef(null);
+    // Simulated reactive HPA pod count — reacts to current CPU with scale-down stabilization.
+    // Kept in a ref so scale-down damping persists across ticks without causing re-renders.
+    const hpaPodsRef = useRef(2);
+
+    // Prediction result cache — skips the API call when the key inputs haven't changed.
+    // Signature encodes the dominant model features (pods, RPS, CPU) rounded to suppress
+    // tiny float noise.  Always bypassed inside an injected spike (traffic changes every tick).
+    const lastWindowSigRef = useRef(null);
+    const lastPredRef      = useRef(null);
+
+    // True once scenario candidates are loaded from the full CSV via the local server.
+    // When false, scenario injection falls back to the limited simulation-queue pool.
+    const [candidatesReady, setCandidatesReady] = useState(false);
 
     const injectSpike = (type) => {
         const livePods = parseInt(lastRowRef.current?.current_pod_count) || 2;
@@ -279,8 +298,39 @@ export const MLModelProvider = ({ children }) => {
         // ─────────────────────────────────────────────────────────────────────
 
         const insertAt = simIndexRef.current;
+
+        // ── Post-spike ramp-down rows ─────────────────────────────────────────
+        // After the scenario ends the queue resumes at the simulation baseline
+        // (pods ≈ 2). Without a ramp-down this produces a hard 13→2 cliff that
+        // is physically impossible (Kubernetes HPA stabilises over ~5 minutes).
+        // We insert extra rows that linearly step pod count back to the baseline.
+        // All signal features come from the REAL queue rows at that position so
+        // only current_pod_count is overridden — the model still sees valid data.
+        const spikeEndPods = parseInt(stitchedRows[stitchedRows.length - 1].current_pod_count) || 2;
+        const resumePods   = parseInt(simulationQueue[insertAt]?.current_pod_count) || 2;
+        const podDropDelta = spikeEndPods - resumePods;
+        const rampDownRows = [];
+        if (podDropDelta > MAX_POD_STEP) {
+            const RAMP_DOWN_STEPS = Math.ceil(podDropDelta / MAX_POD_STEP);
+            for (let i = 0; i < RAMP_DOWN_STEPS; i++) {
+                const t = (i + 1) / RAMP_DOWN_STEPS;
+                const pods = Math.round(spikeEndPods - podDropDelta * t);
+                const srcRow = simulationQueue[insertAt + i]
+                    ?? simulationQueue[insertAt]
+                    ?? stitchedRows[stitchedRows.length - 1];
+                rampDownRows.push({ ...srcRow, current_pod_count: pods, _isRampDown: true });
+            }
+        }
+        const allInjectedRows = [...stitchedRows, ...rampDownRows];
+        // ─────────────────────────────────────────────────────────────────────
+
         setSpikeActive(type);
-        spikeEndRef.current = insertAt + stitchedRows.length;
+        spikeEndRef.current = insertAt + allInjectedRows.length;
+
+        // Invalidate the prediction cache so the first spike tick always fires a
+        // live API call — the traffic pattern has just changed dramatically.
+        lastWindowSigRef.current = null;
+        lastPredRef.current      = null;
 
         // Store context for lookback-window override in the tick handler.
         // contextRows is null when falling back to queue-based selection.
@@ -290,7 +340,7 @@ export const MLModelProvider = ({ children }) => {
 
         setSimulationQueue((prev) => {
             const next = [...prev];
-            next.splice(insertAt, 0, ...stitchedRows);
+            next.splice(insertAt, 0, ...allInjectedRows);
             return next;
         });
     };
@@ -404,6 +454,7 @@ export const MLModelProvider = ({ children }) => {
             .then((candidates) => {
                 if (candidates) {
                     scenarioCandidatesRef.current = candidates;
+                    setCandidatesReady(true);
                     console.info("Scenario candidates loaded — scenarios will use full-CSV context window for accurate predictions.");
                 }
             })
@@ -420,14 +471,23 @@ export const MLModelProvider = ({ children }) => {
         const interval = setInterval(async () => {
             const idx = simIndexRef.current;
             if (idx >= simulationQueue.length - 6) {
-                // Loop back to the start of the accurate zone
+                // Loop back to the start of the stable zone.
+                // Keep prediction history and alerts so demo charts don't blank mid-presentation.
+                // Only reset the per-session accuracy counters.
                 simIndexRef.current = SIM_START_OFFSET;
                 provisioningStats.current = { under: 0, exact: 0, over: 0, total: 0 };
                 errorHistory.current = [];
-                setPredictionLog([]);
-                setAccuracyHistory([]);
-                setAlerts([]);
-                clearPredictions();
+                // Cap history to last 500 to avoid stale data mixing with new session
+                setPredictionLog((prev) => prev.slice(-500));
+                setAlerts((prev) => [
+                    ...prev.slice(-49),
+                    {
+                        level: "info",
+                        message: "Simulation loop restarted",
+                        detail: "Queue reset to stable zone — accuracy counters reset for new session",
+                        time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+                    },
+                ]);
                 activeScenarioContextRef.current = null;
                 return;
             }
@@ -489,15 +549,27 @@ export const MLModelProvider = ({ children }) => {
                 return [...features, parseFloat(r.current_pod_count || 0)];
             });
 
-            let predictedPodsAtT5 = actualPods;
+            // Skip the API call when meaningful inputs are unchanged since the last tick.
+            // Dominant features: pod count, RPS, CPU usage.  During an injected spike every
+            // tick is actively changing, so the cache is always bypassed there.
+            const windowSig = `${actualPods}-${Math.round(requestRate)}-${Math.round(cpuUsage)}`;
+            const canReuse  = !row._isSpike
+                && lastWindowSigRef.current === windowSig
+                && lastPredRef.current !== null;
+
+            let predictedPodsAtT5 = canReuse ? lastPredRef.current : actualPods;
             const t0 = performance.now();
-            try {
-                const resp = await predictPodScaling(apiWindow, timestamp.toISOString());
-                // Round to nearest integer — pod counts are always whole numbers
-                predictedPodsAtT5 = Math.round(resp.predicted_pods) || actualPods;
-                setApiLatency(Math.round(performance.now() - t0));
-            } catch (e) {
-                console.error("Prediction error:", e.message);
+            if (!canReuse) {
+                try {
+                    const resp = await predictPodScaling(apiWindow, timestamp.toISOString());
+                    // Round to nearest integer — pod counts are always whole numbers
+                    predictedPodsAtT5 = Math.round(resp.predicted_pods) || actualPods;
+                    setApiLatency(Math.round(performance.now() - t0));
+                    lastWindowSigRef.current = windowSig;
+                    lastPredRef.current      = predictedPodsAtT5;
+                } catch (e) {
+                    console.error("Prediction error:", e.message);
+                }
             }
 
             setCurrentPods(actualPods);
@@ -505,15 +577,30 @@ export const MLModelProvider = ({ children }) => {
             const scaleDiff = predictedPodsAtT5 - actualPods;
             setScalingStatus(scaleDiff > 0 ? "Scaling UP" : scaleDiff < 0 ? "Scaling DOWN" : "Stable");
 
+            // ── Simulate reactive HPA baseline ────────────────────────────────────
+            // Standard Kubernetes HPA: desiredReplicas = ceil(current × cpuUsage / target)
+            // CPU target = 65%.  Scale-up: immediate.  Scale-down: stabilised (1 pod/tick max).
+            // This gives users a direct visual comparison: proactive AI vs reactive HPA.
+            const hpaCpuTarget = 65;
+            const rawHpaPods = Math.ceil(actualPods * (cpuUsage / hpaCpuTarget));
+            const clampedHpa  = Math.max(2, Math.min(rawHpaPods, 30));
+            const prevHpa     = hpaPodsRef.current;
+            const hpaPods     = clampedHpa >= prevHpa
+                ? clampedHpa                       // scale-up: immediate
+                : Math.max(clampedHpa, prevHpa - 1); // scale-down: 1 pod/tick stabilisation
+            hpaPodsRef.current = hpaPods;
+            // ─────────────────────────────────────────────────────────────────────
+
             // Prediction log — record every tick for the chart (full transparency)
             // but exclude transition ticks from the accuracy/MAE calculation.
             const predictionError = predictedPodsAtT5 - actualPodsAtT5;
             const entry = {
                 time: timeStr, currentPods: actualPods, predicted: predictedPodsAtT5,
                 actualAtT5: actualPodsAtT5, error: predictionError,
+                hpaPods,              // reactive baseline — used in accuracy chart comparison
                 transition: isTransitionTick, // flag for chart colouring
             };
-            setPredictionLog((prev) => [...prev, entry]);
+            setPredictionLog((prev) => [...prev.slice(-499), entry]);
             savePrediction(entry);
 
             // Only feed non-transition ticks into accuracy stats
@@ -548,20 +635,24 @@ export const MLModelProvider = ({ children }) => {
                 { name: "Over-provisioned", value: pct.over, color: "#f59e0b" },
             ]);
 
-            // Pod count chart
+            // Pod count chart — three lines:
+            //   actual    : live running pods (solid violet)
+            //   predicted : AI proactive forecast (dashed green, extends 5 min ahead)
+            //   hpa       : reactive HPA baseline (dashed orange, historical only)
             setPodData((prev) => {
-                // Strip predicted from all history so the forecast line only shows current→future
+                // Preserve hpa from history so the reactive baseline is visible in the past
                 const history = prev
                     .filter((d) => d.actual !== null)
                     .slice(-25)
-                    .map((d) => ({ time: d.time, actual: d.actual, predicted: null }));
-                // Current tick: anchor both lines at the same value
-                const current = { time: timeStr, actual: actualPods, predicted: actualPods };
+                    .map((d) => ({ time: d.time, actual: d.actual, predicted: null, hpa: d.hpa ?? null }));
+                // Current tick: anchor actual + hpa; start forecast from here
+                const current = { time: timeStr, actual: actualPods, predicted: actualPods, hpa: hpaPods };
+                // Future points: only the AI forecast line extends forward (HPA has no look-ahead)
                 const future = [];
                 for (let i = 1; i <= 5; i++) {
                     const ft = new Date(timestamp.getTime() + i * 60000);
                     const interp = actualPods + (predictedPodsAtT5 - actualPods) * (i / 5);
-                    future.push({ time: formatTime(ft.toISOString()), actual: null, predicted: Math.round(interp * 10) / 10 });
+                    future.push({ time: formatTime(ft.toISOString()), actual: null, predicted: Math.round(interp * 10) / 10, hpa: null });
                 }
                 return [...history, current, ...future];
             });
@@ -652,6 +743,8 @@ export const MLModelProvider = ({ children }) => {
                 injectSpike, spikeActive,
                 // OOD / confidence
                 oodScore, modelConfidence,
+                // Scenario data quality
+                candidatesReady,
             }}
         >
             {children}

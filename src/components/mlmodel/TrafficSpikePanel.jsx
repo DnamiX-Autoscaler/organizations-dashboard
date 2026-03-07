@@ -69,7 +69,7 @@ const CONF_CONFIG = {
 };
 
 const TrafficSpikePanel = () => {
-    const { injectSpike, spikeActive, isSimulating, isApiHealthy, oodScore, modelConfidence } = useMLModel();
+    const { injectSpike, spikeActive, isSimulating, isApiHealthy, oodScore, modelConfidence, candidatesReady } = useMLModel();
     // Injection only needs the local queue to be loaded (isSimulating).
     // Predictions happen once the remote API is also healthy (isApiHealthy),
     // but row injection is purely a local queue operation.
@@ -99,6 +99,17 @@ const TrafficSpikePanel = () => {
                     </div>
                 )}
             </div>
+
+            {/* Server unavailable warning — visible when local Express server is down */}
+            {isSimulating && !candidatesReady && (
+                <div className="flex gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 text-xs text-amber-700 dark:text-amber-300">
+                    <Icon icon="mdi:server-off" className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                        Local server offline — using queue-based scenario selection (reduced accuracy).
+                        Run <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded">node server/index.js</code> for pre-validated full-dataset scenarios.
+                    </span>
+                </div>
+            )}
 
             {/* OOD Confidence meter — always visible once simulation starts */}
             {isSimulating && (
@@ -172,6 +183,15 @@ const TrafficSpikePanel = () => {
                                         {s.expectedAccuracy} accuracy
                                     </span>
                                     <span className="text-[10px] text-gray-400 font-mono">{s.oodExpected} OOD</span>
+                                    {isSimulating && (
+                                        candidatesReady
+                                            ? <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300">
+                                                ✓ Pre-validated
+                                              </span>
+                                            : <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                                                Queue fallback
+                                              </span>
+                                    )}
                                 </div>
                             </button>
                         );

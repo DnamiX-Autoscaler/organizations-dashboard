@@ -14,10 +14,33 @@ const __dirname = dirname(__filename);
 config({ path: join(__dirname, ".env") });
 
 const app = express();
-app.use(cors());
+
+// Restrict CORS to the local Vite dev server only — do NOT open to all origins.
+const ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
+];
+app.use(cors({
+  origin: (origin, cb) => {
+    // Allow requests with no Origin header (e.g. curl, Postman, same-origin)
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error(`CORS: origin "${origin}" not allowed`));
+  },
+  methods: ["GET", "POST", "PUT", "DELETE"],
+}));
 app.use(express.json());
 
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/ml_dashboard";
+
+// Disable Mongoose command buffering so queries fail immediately instead of
+// hanging indefinitely when MongoDB is unavailable.
+mongoose.set("bufferCommands", false);
+
+// Tracks whether the MongoDB connection is live.
+// DB-backed routes check this via requireMongo middleware.
+let mongoConnected = false;
 
 // ─── Mongoose Models ─────────────────────────────────────────────────────────
 
@@ -113,10 +136,17 @@ const scoreWindow = (type, rpsWin) => {
     return avg - std * 0.5;
   }
   if (type === "flash_sale") {
+    // ⚠  KEEP IN SYNC with findRealScenarioRows() in src/services/MLModelContext.jsx
     const peakIdx = norm.indexOf(Math.max(...norm));
     const mid = (n - 1) / 2;
     const centreScore = 1 - Math.abs(peakIdx - mid) / n;
-    return norm[peakIdx] * centreScore;
+    const riseScore = peakIdx > 0
+      ? (norm[peakIdx] - norm[0]) / (norm[peakIdx] || 1)
+      : 0;
+    const fallScore = peakIdx < n - 1
+      ? (norm[peakIdx] - norm[n - 1]) / (norm[peakIdx] || 1)
+      : 0;
+    return norm[peakIdx] * (centreScore * 0.4 + riseScore * 0.3 + fallScore * 0.3);
   }
   if (type === "gradual_ramp") {
     const xMean = (n - 1) / 2;
@@ -201,6 +231,21 @@ app.get("/api/scenario-candidates", (_req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ─── Middleware: require MongoDB ─────────────────────────────────────────────
+//
+// All routes below this point require an active MongoDB connection.
+// If the database is unavailable the server still starts and serves CSV/scenario
+// routes — only these DB-backed routes return 503 until MongoDB connects.
+const requireMongo = (_req, res, next) => {
+  if (!mongoConnected) {
+    return res.status(503).json({
+      error: "Database unavailable — start the server with a valid MONGO_URI to persist data.",
+    });
+  }
+  next();
+};
+app.use(["/api/predictions", "/api/logs", "/api/model-metrics"], requireMongo);
 
 // ─── Routes: Predictions ─────────────────────────────────────────────────────
 
@@ -306,13 +351,27 @@ app.put("/api/model-metrics", async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
+// Start the HTTP server immediately — CSV and scenario-candidates routes are
+// fully functional without MongoDB.  The frontend simulation queue and scenario
+// injection work from the first request regardless of database state.
+app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`))
+  .on("error", (/** @type {NodeJS.ErrnoException} */ err) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`❌  Port ${PORT} is already in use.  Kill the existing process or set a different PORT in server/.env`);
+    } else {
+      console.error("❌  Server error:", err.message);
+    }
+    process.exit(1);
+  });
+
+// Connect MongoDB in the background.  If it fails, DB-backed routes return 503
+// (via requireMongo) but the server keeps running.
 mongoose
   .connect(MONGO_URI)
   .then(() => {
-    console.log(`✅ MongoDB connected: ${MONGO_URI}`);
-    app.listen(PORT, () => console.log(`🚀 DB server running on http://localhost:${PORT}`));
+    mongoConnected = true;
+    console.log("✅ MongoDB connected — DB routes enabled");
   })
   .catch((err) => {
-    console.error("❌ MongoDB connection failed:", err.message);
-    process.exit(1);
+    console.warn("⚠️  MongoDB unavailable — DB routes disabled:", err.message);
   });
