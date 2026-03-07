@@ -1,13 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import ServiceMetricsGroup from "./ServiceMetricsGroup";
-import { useScaleWithMetrics } from "../../../hooks/useScaleWithMetrics";
+import { useDeploymentHealthSSE } from "../../../hooks/useDeploymentHealthSSE";
+import TitleHeader from "../../../components/common/TitleHeader";
+import Table from "../../../components/common/Table";
 
 const DeploymentHealth = () => {
-    const { data: deployments, loading, error, hasMore, loadMore, refresh } = useScaleWithMetrics();
+    const [page, setPage] = useState(1);
+    const limit = 10;
+    const { healthData: deployments, pagination, loading } = useDeploymentHealthSSE([], page, limit);
     const [selectedDeployment, setSelectedDeployment] = useState(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    const handlePrevPage = () => {
+        if (page > 1) {
+            setPage(page - 1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    const handleNextPage = () => {
+        if (pagination?.hasMore) {
+            setPage(page + 1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
 
     const handleViewDetails = (deployment) => {
         setSelectedDeployment(deployment);
@@ -62,187 +80,147 @@ const DeploymentHealth = () => {
         return "bg-red-100 dark:bg-red-900/30";
     };
 
+    // Define table columns
+    const columns = [
+        { key: "deployment", label: "Deployment", icon: "mdi:kubernetes", bold: true },
+        { key: "namespace", label: "Namespace", icon: "mdi:folder", bold: false },
+        { key: "healthScore", label: "Health", icon: "mdi:heart-pulse", bold: false },
+        { key: "pods", label: "Pods", icon: "mdi:check-circle", bold: false },
+        { key: "restarts", label: "Restarts", icon: "mdi:refresh", bold: false },
+        { key: "crashLoop", label: "Status", icon: "mdi:alert", bold: false },
+        { key: "lastScaled", label: "Last Scaled", icon: "mdi:clock", bold: false },
+        { key: "actions", label: "Actions", icon: "mdi:menu", bold: false },
+    ];
+
+    // Prepare data for table
+    const tableData = deployments.map((deployment) => {
+        const readyPods = (deployment.podStatus || []).filter(pod => pod.ready).length;
+        const totalPods = (deployment.podStatus || []).length;
+        const totalRestarts = (deployment.restarts || []).reduce((sum, r) => sum + (r.count || 0), 0);
+        const crashLoopCount = (deployment.crashLoopBackOff || []).length;
+        const healthScore = deployment.overallScore || 0;
+
+        return {
+            id: deployment._id,
+            deployment: (
+                <div className="flex items-center gap-2">
+                    <Icon icon="mdi:kubernetes" className="w-4 h-4 text-blue-500" />
+                    <span className="truncate max-w-[150px]">{deployment.deployment || 'N/A'}</span>
+                </div>
+            ),
+            namespace: <span className="truncate max-w-[100px]">{deployment.namespace || 'N/A'}</span>,
+            healthScore: (
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${getHealthBg(healthScore)} ${getHealthColor(healthScore)}`}>
+                    {healthScore}%
+                </span>
+            ),
+            pods: (
+                <div className="text-center">
+                    <div className="text-sm font-medium">{readyPods}/{totalPods}</div>
+                    <div className="text-[10px] text-gray-400">{deployment.replicas || 0} replicas</div>
+                </div>
+            ),
+            restarts: (
+                <span className={`font-bold ${totalRestarts > 50 ? 'text-red-500' : totalRestarts > 20 ? 'text-yellow-500' : 'text-green-500'}`}>
+                    {totalRestarts}
+                </span>
+            ),
+            crashLoop: crashLoopCount > 0 ? (
+                <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-xs font-bold">
+                    {crashLoopCount}
+                </span>
+            ) : (
+                <Icon icon="mdi:check-circle" className="w-5 h-5 mx-auto text-green-500" />
+            ),
+            lastScaled: (
+                <span className="text-xs truncate max-w-[120px] block">
+                    {deployment.lastScaled ? new Date(deployment.lastScaled).toLocaleString() : 'N/A'}
+                </span>
+            ),
+            actions: (
+                <button
+                    onClick={() => handleViewDetails(deployment)}
+                    className="p-2 hover:bg-primary/10 rounded-lg transition-colors group"
+                    title="View Details"
+                >
+                    <Icon
+                        icon="mdi:eye"
+                        className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors"
+                    />
+                </button>
+            ),
+        };
+    });
+
     return (
         <div className="flex flex-col h-full space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-4">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                        <Icon icon="mdi:heart-pulse" className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Deployment Health</h1>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Cluster & workload sanity gatekeeper</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                        <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                            {deployments.length} Record{deployments.length !== 1 ? 's' : ''}
-                        </span>
-                    </div>
-                    <button
-                        onClick={refresh}
-                        disabled={loading}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
-                        title="Refresh"
-                    >
-                        <Icon icon="mdi:refresh" className={`w-5 h-5 text-gray-600 dark:text-gray-400 ${loading ? 'animate-spin' : ''}`} />
-                    </button>
-                </div>
-            </div>
+            <TitleHeader
+                icon="mdi:heart-pulse"
+                title="Deployment Health"
+                subtitle="Cluster & workload sanity gatekeeper"
+            />
 
             {/* Deployments Table */}
-            <div className="bg-white dark:bg-darkBackground border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 uppercase text-[10px] font-bold">
-                            <tr>
-                                <th className="px-5 py-3">Deployment</th>
-                                <th className="px-5 py-3">Namespace</th>
-                                <th className="px-5 py-3 text-center">Health Score</th>
-                                <th className="px-5 py-3 text-center">Replicas</th>
-                                <th className="px-5 py-3 text-center">Ready Pods</th>
-                                <th className="px-5 py-3 text-center">Restarts</th>
-                                <th className="px-5 py-3 text-center">CrashLoop</th>
-                                <th className="px-5 py-3">Last Scaled</th>
-                                <th className="px-5 py-3">Record Time</th>
-                                <th className="px-5 py-3 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                            {deployments.length === 0 && loading ? (
-                                <tr>
-                                    <td colSpan="10" className="px-5 py-8 text-center text-gray-500 dark:text-gray-400">
-                                        <Icon icon="mdi:loading" className="w-12 h-12 mx-auto mb-2 animate-spin text-primary" />
-                                        <p>Loading deployment health data...</p>
-                                    </td>
-                                </tr>
-                            ) : deployments.length === 0 ? (
-                                <tr>
-                                    <td colSpan="10" className="px-5 py-8 text-center text-gray-500 dark:text-gray-400">
-                                        <Icon icon="mdi:database-off" className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                        <p>No deployment health data available</p>
-                                    </td>
-                                </tr>
-                            ) : (
-                                deployments.map((deployment, idx) => {
-                                    const readyPods = (deployment.podStatus || []).filter(pod => pod.ready).length;
-                                    const totalRestarts = (deployment.restarts || []).reduce((sum, r) => sum + (r.count || 0), 0);
-                                    const crashLoopCount = (deployment.crashLoopBackOff || []).length;
-                                    const healthScore = deployment.overallScore || 0;
+            <div className="space-y-0 overflow-x-hidden">
+                <Table
+                    columns={columns}
+                    data={tableData}
+                    empty={loading ? "Loading deployment health data..." : "No deployment health data available"}
+                    itemsPerPage={10}
+                    showPagination={false}
+                />
 
-                                    return (
-                                        <tr key={deployment._id || idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-                                            <td className="px-5 py-4 font-medium text-gray-900 dark:text-gray-200">
-                                                <div className="flex items-center gap-2">
-                                                    <Icon icon="mdi:kubernetes" className="w-4 h-4 text-blue-500" />
-                                                    {deployment.deployment || 'N/A'}
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-4 text-gray-600 dark:text-gray-400">
-                                                {deployment.namespace || 'N/A'}
-                                            </td>
-                                            <td className="px-5 py-4 text-center">
-                                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${getHealthBg(healthScore)} ${getHealthColor(healthScore)}`}>
-                                                    {healthScore}%
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-4 text-center font-bold text-gray-900 dark:text-gray-200">
-                                                {deployment.replicas || 0}
-                                            </td>
-                                            <td className="px-5 py-4 text-center">
-                                                <span className="text-gray-900 dark:text-gray-200 font-medium">
-                                                    {readyPods}/{(deployment.podStatus || []).length}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-4 text-center">
-                                                <span className={`font-bold ${totalRestarts > 50 ? 'text-red-500' : totalRestarts > 20 ? 'text-yellow-500' : 'text-green-500'}`}>
-                                                    {totalRestarts}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-4 text-center">
-                                                {crashLoopCount > 0 ? (
-                                                    <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-xs font-bold">
-                                                        {crashLoopCount}
-                                                    </span>
-                                                ) : (
-                                                    <Icon icon="mdi:check-circle" className="w-5 h-5 mx-auto text-green-500" />
-                                                )}
-                                            </td>
-                                            <td className="px-5 py-4 text-gray-500 text-xs">
-                                                {deployment.lastScaled ? new Date(deployment.lastScaled).toLocaleString() : 'N/A'}
-                                            </td>
-                                            <td className="px-5 py-4 text-gray-500 text-xs">
-                                                {deployment.createdAt ? new Date(deployment.createdAt).toLocaleString() : 'N/A'}
-                                            </td>
-                                            <td className="px-5 py-4 text-center">
-                                                <button
-                                                    onClick={() => handleViewDetails(deployment)}
-                                                    className="p-2 hover:bg-primary/10 rounded-lg transition-colors group"
-                                                    title="View Details"
-                                                >
-                                                    <Icon
-                                                        icon="mdi:eye"
-                                                        className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors"
-                                                    />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination Controls - Next Button */}
-                {hasMore && (
-                    <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-4">
+                {/* Custom Pagination Controls for SSE */}
+                {pagination && deployments.length > 0 && (
+                    <div className="bg-white dark:bg-darkBackground border border-gray-200 dark:border-gray-700 border-t-0 rounded-b-xl px-5 py-4">
                         <div className="flex items-center justify-between">
-                            {/* Showing records info */}
+                            {/* Pagination info */}
                             <div className="text-sm text-gray-500 dark:text-gray-400">
-                                Showing <span className="font-medium text-gray-900 dark:text-white">{deployments.length}</span> records
+                                Showing page <span className="font-medium text-gray-900 dark:text-white">{page}</span> of{' '}
+                                <span className="font-medium text-gray-900 dark:text-white">{pagination.totalPages}</span>
+                                {' '}({pagination.totalRecords} total records)
                             </div>
 
-                            {/* Next button */}
-                            <button
-                                onClick={loadMore}
-                                disabled={loading}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                    loading
-                                        ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed'
-                                        : 'bg-primary text-white hover:bg-primary/90'
-                                }`}
-                            >
-                                {loading ? (
-                                    <>
-                                        <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" />
-                                        <span>Loading...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span>Next</span>
-                                        <Icon icon="mdi:arrow-right" className="w-5 h-5" />
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                )}
+                            {/* Navigation buttons */}
+                            <div className="flex items-center gap-2">
+                                {/* Previous button */}
+                                <button
+                                    onClick={handlePrevPage}
+                                    disabled={page === 1 || loading}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                        page === 1 || loading
+                                            ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-primary/10 hover:text-primary'
+                                    }`}
+                                >
+                                    <Icon icon="mdi:chevron-left" className="w-5 h-5" />
+                                    <span>Previous</span>
+                                </button>
 
-                {/* Error Message */}
-                {error && (
-                    <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-4">
-                        <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                            <Icon icon="mdi:alert-circle" className="w-5 h-5" />
-                            <span className="text-sm">{error}</span>
-                            <button
-                                onClick={refresh}
-                                className="ml-auto text-sm font-medium hover:underline"
-                            >
-                                Retry
-                            </button>
+                                {/* Next button */}
+                                <button
+                                    onClick={handleNextPage}
+                                    disabled={!pagination.hasMore || loading}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                        !pagination.hasMore || loading
+                                            ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                                            : 'bg-primary text-white hover:bg-primary/90'
+                                    }`}
+                                >
+                                    {loading ? (
+                                        <>
+                                            <Icon icon="mdi:loading" className="w-5 h-5 animate-spin" />
+                                            <span>Loading...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>Next</span>
+                                            <Icon icon="mdi:chevron-right" className="w-5 h-5" />
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
