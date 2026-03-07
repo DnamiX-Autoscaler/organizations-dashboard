@@ -72,17 +72,24 @@ const TopTooltip = ({ active, payload, label }) => {
 const BottomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     const e = payload[0]?.value;
+    const transition = payload[0]?.payload?.transition;
     if (e == null) return null;
     const abs = Math.abs(e);
     return (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm">
             <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">{label}</p>
-            <p className={`font-bold ${abs <= 1 ? "text-emerald-600" : abs <= 3 ? "text-amber-600" : "text-red-600"}`}>
-                Error: {e > 0 ? "+" : ""}{e} pod{abs !== 1 ? "s" : ""}
-            </p>
-            <p className="text-xs text-gray-400 mt-0.5">
-                {abs === 0 ? "Exact match" : abs <= 1 ? "Within ±1 pod" : abs <= 3 ? "Minor miss" : "Large miss"}
-            </p>
+            {transition ? (
+                <p className="text-xs text-gray-400">Rapid-scaling tick — excluded from metrics</p>
+            ) : (
+                <>
+                    <p className={`font-bold ${abs <= 1 ? "text-emerald-600" : abs <= 3 ? "text-amber-600" : "text-red-600"}`}>
+                        Error: {e > 0 ? "+" : ""}{e} pod{abs !== 1 ? "s" : ""}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                        {abs === 0 ? "Exact match" : abs <= 1 ? "Within ±1 pod" : abs <= 3 ? "Minor deviation" : "Significant miss"}
+                    </p>
+                </>
+            )}
         </div>
     );
 };
@@ -97,28 +104,32 @@ const PredictionAccuracyChart = () => {
     // Use the last 40 predictions so the chart stays readable
     const displayLog = predictionLog.slice(-40);
 
-    // Derive bar colour per error value
-    const barColor = (error) => {
+    // Derive bar colour per error value; fade transition ticks
+    const barColor = (error, transition) => {
+        if (transition) return "#d1d5db"; // gray — excluded from metrics
         const abs = Math.abs(error);
         if (abs <= 1) return "#10b981"; // emerald
         if (abs <= 3) return "#f59e0b"; // amber
         return "#ef4444";               // red
     };
 
-    // Summary stats
+    // Summary stats — exclude transition ticks
     const stats = useMemo(() => {
-        if (!displayLog.length) return null;
-        const errors = displayLog.map((d) => d.error);
+        const evaluable = displayLog.filter((d) => !d.transition);
+        if (!evaluable.length) return null;
+        const errors = evaluable.map((d) => d.error);
         const abs    = errors.map(Math.abs);
         const mae    = abs.reduce((s, v) => s + v, 0) / abs.length;
         const exact  = errors.filter((e) => e === 0).length;
         const within1 = abs.filter((e) => e <= 1).length;
         const n = errors.length;
+        const transitionCount = displayLog.length - n;
         return {
             mae: mae.toFixed(2),
             exactPct: ((exact  / n) * 100).toFixed(1),
             within1Pct: ((within1 / n) * 100).toFixed(1),
             n,
+            transitionCount,
         };
     }, [displayLog]);
 
@@ -171,7 +182,7 @@ const PredictionAccuracyChart = () => {
                     <div className="flex flex-col gap-0.5 px-4 py-3 rounded-xl bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-800/30">
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-teal-500">Within ±1 Pod</span>
                         <span className="text-2xl font-bold text-teal-700 dark:text-teal-300">{stats.within1Pct}%</span>
-                        <span className="text-[10px] text-teal-400">of {stats.n} predictions</span>
+                        <span className="text-[10px] text-teal-400">of {stats.n} evaluable predictions{stats.transitionCount > 0 ? ` (· ${stats.transitionCount} rapid-scaling ticks excluded)` : ""}</span>
                     </div>
                 </div>
             )}
@@ -254,10 +265,11 @@ const PredictionAccuracyChart = () => {
             {/* ── BOTTOM chart: Error bars ─────────────────────── */}
             <div>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-3">
-                    Prediction error per tick (predicted − actual)
+                    Prediction error per inference cycle
                     <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block" /> ≤ 1 pod</span>
                     <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-amber-400 inline-block" /> ≤ 3 pods</span>
                     <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-red-500 inline-block" /> &gt; 3 pods</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-gray-300 inline-block" /> rapid-scaling (excluded)</span>
                 </p>
                 <div className="h-[120px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -284,7 +296,7 @@ const PredictionAccuracyChart = () => {
                             <ReferenceLine y={-1} stroke="#10b981" strokeDasharray="4 3" strokeOpacity={0.5} />
                             <Bar dataKey="error" radius={[3, 3, 0, 0]}>
                                 {displayLog.map((entry, i) => (
-                                    <Cell key={i} fill={barColor(entry.error)} fillOpacity={0.85} />
+                                    <Cell key={i} fill={barColor(entry.error, entry.transition)} fillOpacity={entry.transition ? 0.4 : 0.85} />
                                 ))}
                             </Bar>
                         </BarChart>

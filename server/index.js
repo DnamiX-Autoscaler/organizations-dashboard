@@ -61,10 +61,12 @@ const ModelMetrics = mongoose.model("ModelMetrics", modelMetricsSchema);
 // This endpoint starts in <50 ms and has no dependency on the remote ML API,
 // so the frontend simulation queue populates instantly on every page load.
 const CSV_PATH = join(__dirname, "..", "backend", "data", "data.csv");
-let _simCache = null;  // cache after first parse
+let _simCache = null;  // cache after first parse (last 30%)
+let _fullCache = null; // cache for full sorted dataset (all rows)
 
-const parseSimulationCSV = () => {
-  if (_simCache) return _simCache;
+// ─── Parse helpers ───────────────────────────────────────────────────────────
+
+const _parseSortedRows = () => {
   const raw = readFileSync(CSV_PATH, "utf8");
   const lines = raw.split(/\r?\n/).filter((l) => l.trim().length > 0);
   const headers = lines[0].split(",").map((h) => h.trim());
@@ -74,11 +76,59 @@ const parseSimulationCSV = () => {
     headers.forEach((h, i) => { obj[h] = vals[i]?.trim() ?? ""; });
     return obj;
   });
-  // Sort by timestamp, take last 30%
   rows.sort((a, b) => +new Date(a.timestamp) - +new Date(b.timestamp));
+  return rows;
+};
+
+const parseSimulationCSV = () => {
+  if (_simCache) return _simCache;
+  const rows = _fullCache ?? _parseSortedRows();
+  // Sort by timestamp, take last 30%
   const split = Math.floor(rows.length * 0.7);
   _simCache = { total: rows.length, data: rows.slice(split) };
   return _simCache;
+};
+
+// Full sorted dataset — used by the scenario-candidates endpoint so it can
+// search the richly-varied first 70% (pods 2-30, RPS 18-2188) for the best
+// matching segments, then return them with their 48-row BiLSTM warmup context.
+const parseFullCSV = () => {
+  if (_fullCache) return _fullCache;
+  _fullCache = _parseSortedRows();
+  return _fullCache;
+};
+
+// ─── Scenario scoring (mirrors client-side findRealScenarioRows) ─────────────
+
+// Returns a scalar score for how well an RPS window matches a traffic pattern.
+// Higher is better; used to select the best segment from the full dataset.
+const scoreWindow = (type, rpsWin) => {
+  const n = rpsWin.length;
+  if (n === 0) return -Infinity;
+  const rpsMax = Math.max(...rpsWin) || 1;
+  const norm = rpsWin.map((v) => v / rpsMax);
+  if (type === "load_test") {
+    const avg = norm.reduce((s, v) => s + v, 0) / n;
+    const std = Math.sqrt(norm.reduce((s, v) => s + (v - avg) ** 2, 0) / n) || 1;
+    return avg - std * 0.5;
+  }
+  if (type === "flash_sale") {
+    const peakIdx = norm.indexOf(Math.max(...norm));
+    const mid = (n - 1) / 2;
+    const centreScore = 1 - Math.abs(peakIdx - mid) / n;
+    return norm[peakIdx] * centreScore;
+  }
+  if (type === "gradual_ramp") {
+    const xMean = (n - 1) / 2;
+    const yMean = norm.reduce((s, v) => s + v, 0) / n;
+    const num   = norm.reduce((s, v, j) => s + (j - xMean) * (v - yMean), 0);
+    const denX  = Math.sqrt(norm.reduce((s, _, j) => s + (j - xMean) ** 2, 0));
+    const denY  = Math.sqrt(norm.reduce((s, v) => s + (v - yMean) ** 2, 0));
+    const r = denX * denY === 0 ? 0 : num / (denX * denY);
+    const gain  = norm[n - 1] - norm[0];
+    return r * 0.7 + gain * 0.3;
+  }
+  return 0;
 };
 
 app.get("/api/simulation-data", (_req, res) => {
@@ -87,6 +137,67 @@ app.get("/api/simulation-data", (_req, res) => {
     res.json({ total_rows: total, simulation_rows: data.length, data });
   } catch (err) {
     console.error("simulation-data error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Routes: Scenario candidates ─────────────────────────────────────────────
+
+// GET /api/scenario-candidates
+//
+// Pre-selects the best matching segment for each of the 3 load-test scenario
+// types from the FULL dataset (first 70% = ~30 240 rows, covering pods 2-30
+// and RPS 18-2 188 — much richer than the last-30% simulation zone).
+//
+// Returns, per type:
+//   context  — 48 rows immediately before the chosen segment.
+//              The frontend feeds these into the BiLSTM lookback window so
+//              the model always starts with in-distribution context, giving
+//              accurate predictions from the very first spike tick.
+//   scenario — N rows of the actual spike, tagged with _isSpike / _spikeType.
+//
+// Response is cached on first call (< 2 s); subsequent calls return instantly.
+let _candidatesCache = null;
+
+app.get("/api/scenario-candidates", (_req, res) => {
+  try {
+    if (_candidatesCache) return res.json(_candidatesCache);
+
+    const allRows   = parseFullCSV();
+    // First 70% — richer traffic: pods up to 30, RPS up to 2188
+    const pool      = allRows.slice(0, Math.floor(allRows.length * 0.7));
+    const CONTEXT   = 48;                           // BiLSTM lookback size
+    const ROW_COUNT = { flash_sale: 20, gradual_ramp: 25, load_test: 20 };
+
+    const result = {};
+    for (const type of ["flash_sale", "gradual_ramp", "load_test"]) {
+      const rowCount   = ROW_COUNT[type];
+      // Ensure CONTEXT rows are always available before every candidate
+      const searchPool = pool.slice(CONTEXT);
+      const rpsValues  = searchPool.map((r) => parseFloat(r.request_rate_rps) || 0);
+
+      let bestStart = 0;
+      let bestScore = -Infinity;
+      for (let i = 0; i <= searchPool.length - rowCount; i++) {
+        const win   = rpsValues.slice(i, i + rowCount);
+        const score = scoreWindow(type, win);
+        if (score > bestScore) { bestScore = score; bestStart = i; }
+      }
+
+      // bestStart is relative to searchPool (which starts at CONTEXT in pool)
+      const absStart    = CONTEXT + bestStart;
+      const contextRows = pool.slice(absStart - CONTEXT, absStart);
+      const scenarioRows = searchPool
+        .slice(bestStart, bestStart + rowCount)
+        .map((r) => ({ ...r, _isSpike: true, _spikeType: type }));
+
+      result[type] = { context: contextRows, scenario: scenarioRows };
+    }
+
+    _candidatesCache = result;
+    res.json(result);
+  } catch (err) {
+    console.error("scenario-candidates error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });

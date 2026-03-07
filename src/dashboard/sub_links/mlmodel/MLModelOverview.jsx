@@ -71,20 +71,20 @@ const MLModelOverview = () => {
     return (
         <div className="space-y-6">
             <TitleHeader
-                title="ML Ops — Overview"
-                subtitle="Live model status, scaling decisions, and pod prediction chart"
+                title="Predictive Autoscaling"
+                subtitle="Real-time inference · Pod demand forecasting · Autonomous scaling decisions"
             />
 
-            {/* Spike active banner */}
+            {/* Active traffic event banner */}
             {spikeActive && (
-                <div className="px-4 py-3 text-sm font-medium rounded-xl flex items-center gap-3 bg-gradient-to-r from-orange-50 to-red-50 text-orange-800 border border-orange-300 dark:from-orange-900/30 dark:to-red-900/30 dark:text-orange-300 dark:border-orange-700 animate-pulse">
-                    <div className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping" />
-                    <Icon icon="mdi:lightning-bolt" className="w-5 h-5 text-orange-500" />
-                    <span className="font-bold uppercase tracking-wide">Traffic Spike Active</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-800/40 font-mono">
+                <div className="px-4 py-3 text-sm font-medium rounded-xl flex items-center gap-3 bg-gradient-to-r from-orange-50 to-amber-50 text-orange-800 border border-orange-200 dark:from-orange-900/30 dark:to-amber-900/20 dark:text-orange-300 dark:border-orange-700/50">
+                    <div className="w-2 h-2 rounded-full bg-orange-500 animate-ping" />
+                    <Icon icon="mdi:lightning-bolt" className="w-4 h-4 text-orange-500" />
+                    <span className="font-semibold tracking-wide">Traffic Event Detected</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-800/40 font-medium">
                         {spikeActive.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                     </span>
-                    <span className="ml-auto text-xs opacity-70">Model responding to injected spike data — real BiLSTM inference</span>
+                    <span className="ml-auto text-xs opacity-60">Inference engine responding · Scaling decision in progress</span>
                 </div>
             )}
 
@@ -107,7 +107,7 @@ const MLModelOverview = () => {
                         className="w-5 h-5"
                     />
                     <span className="font-semibold">
-                        {isApiHealthy ? "Backend Connected" : "Backend Offline"}
+                        {isApiHealthy ? "Inference Engine Online" : "Inference Engine Offline"}
                     </span>
                     {isApiHealthy && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-800/30">
@@ -116,8 +116,8 @@ const MLModelOverview = () => {
                     )}
                 </div>
                 {isSimulating && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-800/30 dark:text-blue-300 animate-pulse">
-                        ● Live Simulation
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-800/30 dark:text-emerald-300">
+                        ● Live
                     </span>
                 )}
             </div>
@@ -160,7 +160,7 @@ const MLModelOverview = () => {
                 isApiHealthy={isApiHealthy}
             />
 
-            {/* Traffic spike demo panel */}
+            {/* Traffic scenario simulator */}
             <TrafficSpikePanel />
         </div>
     );

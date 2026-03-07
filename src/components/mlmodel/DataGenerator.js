@@ -22,36 +22,41 @@ export const generateRandomFeatureRow = (currentPods, step = 0) => {
   const baseWave = Math.sin(step * 0.1) * 0.5 + 0.5; // 0 to 1
   const noise = () => (Math.random() - 0.5) * 0.2; // +/- 0.1 noise
 
-  // 1. request_rate_rps (correlated with daily wave)
-  // Low: 500, High: 1500
-  row.push(500 + baseWave * 1000 + noise() * 100); 
+  // Feature scales match actual data.csv observations:
+  //   RPS: 17–780 (simulation zone 17–780; typical 50–250)
+  //   Latency p95: 50–200 ms
+  //   CPU avg: 20–60 %
+  //   Memory avg: 470–680 MB
+
+  // 1. request_rate_rps
+  row.push(50 + baseWave * 200 + noise() * 30);
 
   // 2-3. latency (slightly correlated with load)
-  row.push(20 + baseWave * 30 + noise() * 5); // p95
-  row.push(30 + baseWave * 50 + noise() * 10); // p99
+  row.push(50 + baseWave * 80 + noise() * 10);   // p95
+  row.push(70 + baseWave * 120 + noise() * 15);  // p99
 
-  // 4. error rate (spikes randomly but low base)
-  row.push(Math.max(0, Math.random() > 0.9 ? Math.random() * 5 : 0.1));
+  // 4. error rate (spikes rarely, low base)
+  row.push(Math.max(0, Math.random() > 0.9 ? Math.random() * 0.5 : 0.035));
 
   // 5. queue length
-  row.push(Math.floor(baseWave * 50 + Math.random() * 10));
+  row.push(Math.floor(baseWave * 20 + Math.random() * 5));
 
   // 6-9. CPU/Mem (correlated with load)
-  row.push(30 + baseWave * 40 + noise() * 5); // CPU Avg
-  row.push(40 + baseWave * 50 + noise() * 5); // CPU P95
-  row.push(200 + baseWave * 300 + noise() * 50); // Mem Avg
-  row.push(300 + baseWave * 400 + noise() * 50); // Mem P95
+  row.push(20 + baseWave * 20 + noise() * 4);   // CPU avg %
+  row.push(28 + baseWave * 28 + noise() * 5);   // CPU p95 %
+  row.push(470 + baseWave * 130 + noise() * 30); // Mem avg MB
+  row.push(520 + baseWave * 150 + noise() * 35); // Mem p95 MB
 
-  // 10-13. Time encoding (mocking strictly for shape)
+  // 10-13. Time encoding
   row.push(Math.sin(step * 0.05));
   row.push(Math.cos(step * 0.05));
   row.push(Math.sin(step * 0.01));
   row.push(Math.cos(step * 0.01));
 
-  // 14-16. Mesh stats
-  row.push(100 + baseWave * 500);
-  row.push(10 + Math.random() * 5);
-  row.push(0);
+  // 14-16. Mesh stats (closely track request_rate_rps)
+  row.push(45 + baseWave * 190 + noise() * 25);
+  row.push(50 + baseWave * 75 + noise() * 8);
+  row.push(0.035 + noise() * 0.004);
 
   // 17-20. Centrality (relatively static)
   row.push(0.5 + noise());
@@ -59,8 +64,7 @@ export const generateRandomFeatureRow = (currentPods, step = 0) => {
   row.push(0.3 + noise());
   row.push(0.6 + noise());
   
-  // 21. Current Pod Count (Target) - scaled roughly by load
-  // Simple heuristic: 1 pod per 100 RPS approx
+  // 21. Current Pod Count (Target)
   row.push(currentPods);
   
   return row;
@@ -77,13 +81,10 @@ export const getInitialHistory = (lookback = 48) => {
 export const getPodCountData = () => {
   const labels = generateTimeLabels(20);
   return labels.map((time, index) => {
-    const actual = Math.floor(10 + Math.sin(index * 0.5) * 5 + Math.random() * 2);
-    const predicted = Math.floor(actual + (Math.random() - 0.5) * 2); // Slight deviation
-    return {
-      time,
-      actual,
-      predicted,
-    };
+    // Real simulation zone: pods 2–12, wave-shaped
+    const actual = Math.max(2, Math.round(2 + Math.sin(index * 0.4) * 3 + Math.random()));
+    const predicted = Math.max(2, Math.round(actual + (Math.random() - 0.5) * 1.5));
+    return { time, actual, predicted };
   });
 };
 
@@ -91,9 +92,9 @@ export const getResourceMetricsData = () => {
   const labels = generateTimeLabels(15);
   return labels.map((time) => ({
     time,
-    cpu: Math.floor(40 + Math.random() * 30), // 40-70%
-    memory: Math.floor(50 + Math.random() * 20), // 50-70%
-    network: Math.floor(100 + Math.random() * 100), // Mbps
+    cpu: parseFloat((20 + Math.random() * 20).toFixed(1)),      // 20–40 % (real avg: ~28 %)
+    memory: parseFloat((490 + Math.random() * 120).toFixed(0)), // 490–610 MB (real avg: ~555 MB)
+    network: parseFloat((50 + Math.random() * 150).toFixed(0)), // mesh inbound RPS
   }));
 };
 
@@ -101,9 +102,9 @@ export const getPerformanceMetricsData = () => {
   const labels = generateTimeLabels(15);
   return labels.map((time) => ({
     time,
-    latency: Math.floor(50 + Math.random() * 20), // ms
-    errorRate: parseFloat((Math.random() * 2).toFixed(2)), // %
-    requests: Math.floor(1000 + Math.random() * 500), // RPS
+    latency: parseFloat((60 + Math.random() * 50).toFixed(1)),   // p95 ms (real: 55–130 ms)
+    errorRate: parseFloat((0.03 + Math.random() * 0.01).toFixed(4)), // ~3 % baseline
+    requests: parseFloat((50 + Math.random() * 150).toFixed(0)), // RPS (real: 40–250)
   }));
 };
 
@@ -116,8 +117,8 @@ export const getProvisioningEfficiencyData = () => [
 // Single point generators for live updates
 export const getNewPodPoint = (lastTime) => {
   const time = new Date(Date.now()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const actual = Math.floor(10 + Math.random() * 5);
-  const predicted = Math.floor(actual + (Math.random() - 0.5) * 2);
+  const actual = Math.max(2, Math.round(2 + Math.random() * 5));
+  const predicted = Math.max(2, Math.round(actual + (Math.random() - 0.5) * 1.5));
   return { time, actual, predicted };
 };
 
@@ -125,9 +126,9 @@ export const getNewResourcePoint = () => {
   const time = new Date(Date.now()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   return {
       time,
-      cpu: Math.floor(40 + Math.random() * 30),
-      memory: Math.floor(50 + Math.random() * 20),
-      network: Math.floor(100 + Math.random() * 100),
+      cpu: parseFloat((20 + Math.random() * 20).toFixed(1)),
+      memory: parseFloat((490 + Math.random() * 120).toFixed(0)),
+      network: parseFloat((50 + Math.random() * 150).toFixed(0)),
   };
 };
 
@@ -135,8 +136,8 @@ export const getNewPerformancePoint = () => {
   const time = new Date(Date.now()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   return {
       time,
-      latency: Math.floor(50 + Math.random() * 20),
-      errorRate: parseFloat((Math.random() * 2).toFixed(2)),
-      requests: Math.floor(1000 + Math.random() * 500),
+      latency: parseFloat((60 + Math.random() * 50).toFixed(1)),
+      errorRate: parseFloat((0.03 + Math.random() * 0.01).toFixed(4)),
+      requests: parseFloat((50 + Math.random() * 150).toFixed(0)),
   };
 };

@@ -37,9 +37,27 @@ export const predictPodScaling = async (windowData, windowEndUtc) => {
 };
 
 /**
- * Fetch simulation data — local server first (fast, always available),
- * falls back to remote ML API if local is not running.
+ * Fetch scenario candidates — pre-selected segments from the FULL dataset.
+ * The server searches the first 70% of data.csv (pods 2–30, RPS 18–2188) and
+ * returns, per scenario type:
+ *   context  — 48 real CSV rows immediately before the segment (BiLSTM warmup)
+ *   scenario — N spike rows tagged with _isSpike / _spikeType
+ *
+ * Returns null if the local server is unavailable (graceful fallback to
+ * queue-based selection inside MLModelContext).
  */
+export const fetchScenarioCandidates = async () => {
+  try {
+    const response = await axios.get(`${LOCAL_URL}/api/scenario-candidates`, { timeout: 30000 });
+    if (response.status === 200 && response.data) {
+      return response.data;
+    }
+    return null;
+  } catch (err) {
+    console.warn("Failed to fetch scenario candidates:", err.message);
+    return null;
+  }
+};
 export const fetchSimulationData = async () => {
   // 1. Try local Express server (reads CSV directly — no cold-start delay)
   try {
