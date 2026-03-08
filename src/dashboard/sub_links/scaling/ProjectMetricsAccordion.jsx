@@ -34,13 +34,32 @@ const ProjectMetricsAccordion = ({ projectName, servicesData }) => {
 
             {isOpen && (
                 <div className="p-4 bg-white dark:bg-darkBackground">
-                    {Object.entries(servicesData).map(([serviceName, metrics]) => (
-                        <ServiceMetricsGroup
-                            key={serviceName}
-                            serviceName={serviceName}
-                            metrics={metrics}
-                        />
-                    ))}
+                    {Object.entries(servicesData)
+                        .sort(([serviceA], [serviceB]) => {
+                            // Priority services at the top
+                            const priorityServices = ['order', 'product'];
+                            const aIsPriority = priorityServices.some(p => serviceA.toLowerCase().includes(p));
+                            const bIsPriority = priorityServices.some(p => serviceB.toLowerCase().includes(p));
+                            
+                            if (aIsPriority && !bIsPriority) return -1;
+                            if (!aIsPriority && bIsPriority) return 1;
+                            
+                            // Among priority services, order comes before product
+                            if (aIsPriority && bIsPriority) {
+                                if (serviceA.toLowerCase().includes('order')) return -1;
+                                if (serviceB.toLowerCase().includes('order')) return 1;
+                            }
+                            
+                            // Alphabetically sort the rest
+                            return serviceA.localeCompare(serviceB);
+                        })
+                        .map(([serviceName, metrics]) => (
+                            <ServiceMetricsGroup
+                                key={serviceName}
+                                serviceName={serviceName}
+                                metrics={metrics}
+                            />
+                        ))}
                 </div>
             )}
         </div>

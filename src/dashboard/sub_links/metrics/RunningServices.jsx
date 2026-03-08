@@ -35,7 +35,7 @@ const RunningServices = () => {
     if (autoRefresh) {
       const interval = setInterval(() => {
         loadServices();
-      }, 10000);
+      }, 2000);
 
       return () => clearInterval(interval);
     }

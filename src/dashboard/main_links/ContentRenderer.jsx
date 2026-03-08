@@ -30,6 +30,19 @@ import Reports from "../sub_links/scaling/Reports";
 import CostResourceImpact from "../sub_links/scaling/CostResourceImpact";
 import DeploymentHealth from "../sub_links/scaling/DeploymentHealth";
 import HistoricalTimeSeries from "../sub_links/metrics/HistoricalTimeSeries";
+import ChaosAnalysis from "../sub_links/scaling/ChaosAnalysis";
+import TestEnvironment from "../sub_links/scaling/TestEnvironment";
+
+//mlmodel sub-components
+import MLModelLogs from "../sub_links/mlmodel/MLModelLogs";
+import MLModelOverview from "../sub_links/mlmodel/MLModelOverview";
+import MLModelPredictionLab from "../sub_links/mlmodel/MLModelPredictionLab";
+import MLModelCostSavings from "../sub_links/mlmodel/MLModelCostSavings";
+import MLModelResourceMonitor from "../sub_links/mlmodel/MLModelResourceMonitor";
+import MLModelAlerts from "../sub_links/mlmodel/MLModelAlerts";
+import { MLModelProvider } from "../../services/MLModelContext";
+
+
 
 // Add more imports as needed...
 
@@ -67,7 +80,17 @@ const ContentRenderer = () => {
       reports: <Reports />,
       cost: <CostResourceImpact />,
       health: <DeploymentHealth />,
+      "chaos-analysis": <ChaosAnalysis />,
+      "test-environment": <TestEnvironment />,
       // Add more scaling sub-components here...
+    },
+    mlmodel: {
+      ["ml-ops-overview"]: <MLModelOverview />,
+      ["prediction-lab"]: <MLModelPredictionLab />,
+      ["cost-savings"]: <MLModelCostSavings />,
+      ["resource-monitor"]: <MLModelResourceMonitor />,
+      ["ml-alerts"]: <MLModelAlerts />,
+      logs: <MLModelLogs />,
     },
     projects: {
       // Add project sub-components here...
@@ -91,6 +114,10 @@ const ContentRenderer = () => {
         </div>
       </div>
     );
+  }
+
+  if (activeMain === "mlmodel") {
+    return <MLModelProvider>{ComponentToRender}</MLModelProvider>;
   }
 
   return ComponentToRender;
