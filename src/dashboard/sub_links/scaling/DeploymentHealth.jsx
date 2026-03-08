@@ -84,9 +84,9 @@ const DeploymentHealth = () => {
     const columns = [
         { key: "deployment", label: "Deployment", icon: "mdi:kubernetes", bold: true },
         { key: "namespace", label: "Namespace", icon: "mdi:folder", bold: false },
-        { key: "healthScore", label: "Health", icon: "mdi:heart-pulse", bold: false },
+        // { key: "healthScore", label: "Health", icon: "mdi:heart-pulse", bold: false },
         { key: "pods", label: "Pods", icon: "mdi:check-circle", bold: false },
-        { key: "restarts", label: "Restarts", icon: "mdi:refresh", bold: false },
+        // { key: "restarts", label: "Restarts", icon: "mdi:refresh", bold: false },
         { key: "crashLoop", label: "Status", icon: "mdi:alert", bold: false },
         { key: "lastScaled", label: "Last Scaled", icon: "mdi:clock", bold: false },
         { key: "actions", label: "Actions", icon: "mdi:menu", bold: false },

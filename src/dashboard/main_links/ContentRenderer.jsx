@@ -30,6 +30,7 @@ import Reports from "../sub_links/scaling/Reports";
 import CostResourceImpact from "../sub_links/scaling/CostResourceImpact";
 import DeploymentHealth from "../sub_links/scaling/DeploymentHealth";
 import ChaosAnalysis from "../sub_links/scaling/ChaosAnalysis";
+import TestEnvironment from "../sub_links/scaling/TestEnvironment";
 
 //mlmodel sub-components
 import MLModelLogs from "../sub_links/mlmodel/MLModelLogs";
@@ -78,6 +79,7 @@ const ContentRenderer = () => {
       cost: <CostResourceImpact />,
       health: <DeploymentHealth />,
       "chaos-analysis": <ChaosAnalysis />,
+      "test-environment": <TestEnvironment />,
       // Add more scaling sub-components here...
     },
     mlmodel: {

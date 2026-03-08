@@ -7,9 +7,22 @@ export default defineConfig({
     port: 3000,
     open: true,
     proxy: {
+      "/api/v1": {
+        target: "http://localhost:6000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/socket.io": {
+        target: "http://localhost:6000",
+        ws: true,
+        changeOrigin: true,
+        secure: false,
+      },
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
+        secure: false,
+      },
       "/process": {
         target: "http://localhost:8000",
         changeOrigin: true,
@@ -65,17 +78,6 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      "/api/v1": {
-        target: "http://localhost:6000",
-        changeOrigin: true,
-        secure: false,
-      },
-      "/socket.io": {
-        target: "http://localhost:6000",
-        ws: true,
-        changeOrigin: true,
-        secure: false,
-      },
     },
   },
   optimizeDeps: {
@@ -86,5 +88,5 @@ export default defineConfig({
     commonjsOptions: {
       include: [/node_modules/],
     },
-  },
+  }
 })
