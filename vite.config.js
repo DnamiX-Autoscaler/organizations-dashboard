@@ -7,8 +7,6 @@ export default defineConfig({
     port: 3000,
     open: true,
     proxy: {
-<<<<<<< Updated upstream
-=======
       "/api/v1": {
         target: "http://localhost:6000",
         changeOrigin: true,
@@ -25,7 +23,6 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
->>>>>>> Stashed changes
       "/process": {
         target: "http://localhost:8000",
         changeOrigin: true,
