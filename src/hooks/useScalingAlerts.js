@@ -6,6 +6,7 @@ export const useScalingAlerts = (initialAlerts = []) => {
 
     useEffect(() => {
         const socket = getSocket();
+        if (!socket) return undefined;
 
         const handleNewAlert = (data) => {
             const newAlert = {

@@ -7,6 +7,7 @@ const ScalingNotification = () => {
 
     useEffect(() => {
         const socket = getSocket();
+        if (!socket) return undefined;
 
         const addAlert = (data, isSystem = false) => {
             const id = Date.now() + Math.random();
