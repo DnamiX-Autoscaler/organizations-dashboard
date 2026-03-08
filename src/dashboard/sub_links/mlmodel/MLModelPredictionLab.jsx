@@ -1,5 +1,7 @@
 import React from "react";
 import TitleHeader from "../../../components/common/TitleHeader";
+import TrafficSpikePanel from "../../../components/mlmodel/TrafficSpikePanel";
+import PredictionAccuracyChart from "../../../components/mlmodel/PredictionAccuracyChart";
 import PredictionLogTable from "../../../components/mlmodel/PredictionLogTable";
 import ModelMetrics from "../../../components/mlmodel/ModelMetrics";
 import AccuracyTrendChart from "../../../components/mlmodel/AccuracyTrendChart";
@@ -12,8 +14,14 @@ const MLModelPredictionLab = () => {
         <div className="space-y-6">
             <TitleHeader
                 title="Prediction Lab"
-                subtitle="Detailed per-prediction log, accuracy trends, and error analysis"
+                subtitle="Traffic scenario simulation · Forecast evaluation · Accuracy analysis"
             />
+
+            {/* Traffic scenario simulator — inject spikes to test model response */}
+            <TrafficSpikePanel />
+
+            {/* Forecast accuracy — predicted vs actual at the same T+5 moment */}
+            <PredictionAccuracyChart />
 
             {/* Model metrics summary */}
             <ModelMetrics metrics={modelMetrics} />

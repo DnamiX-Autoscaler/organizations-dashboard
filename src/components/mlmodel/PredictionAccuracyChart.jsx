@@ -44,28 +44,28 @@ const TopTooltip = ({ active, payload, label }) => {
             {pred?.value != null && (
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-0 border-t-2 border-dashed border-violet-500" />
+                        <div className="w-3 h-0 border-t-2 border-dashed" style={{ borderColor: '#84006A' }} />
                         <span className="text-gray-500 dark:text-gray-400">Predicted Demand</span>
                     </div>
-                    <span className="font-bold text-violet-600 dark:text-violet-300">{pred.value} pods</span>
+                    <span className="font-bold" style={{ color: '#84006A' }}>{pred.value} pods</span>
                 </div>
             )}
             {truth?.value != null && (
                 <div className="flex items-center justify-between gap-4 mt-1">
                     <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-0.5 bg-teal-500 rounded" />
+                        <div className="w-3 h-0.5 bg-cyan-500 rounded" />
                         <span className="text-gray-500 dark:text-gray-400">Actual Demand</span>
                     </div>
-                    <span className="font-bold text-teal-600 dark:text-teal-300">{truth.value} pods</span>
+                    <span className="font-bold text-cyan-600 dark:text-cyan-300">{truth.value} pods</span>
                 </div>
             )}
             {hpa?.value != null && (
                 <div className="flex items-center justify-between gap-4 mt-1">
                     <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-0 border-t-2 border-dashed border-orange-400" />
+                        <div className="w-3 h-0 border-t-2 border-dashed border-amber-400" />
                         <span className="text-gray-500 dark:text-gray-400">HPA Reactive</span>
                     </div>
-                    <span className="font-bold text-orange-500 dark:text-orange-400">{hpa.value} pods</span>
+                    <span className="font-bold text-amber-500 dark:text-amber-400">{hpa.value} pods</span>
                 </div>
             )}
             {err != null && (
@@ -179,87 +179,68 @@ const PredictionAccuracyChart = () => {
     };
 
     return (
-        <div className="p-6 bg-white border border-gray-200 rounded-xl dark:bg-darkBackground dark:border-gray-700 space-y-5">
+        <div className="p-6 bg-white border border-gray-200 rounded-xl dark:bg-darkBackground dark:border-gray-700 space-y-4">
 
             {/* ── Header ──────────────────────────────────────── */}
-            <div className="flex items-start justify-between">
-                <div>
-                    <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
-                        <Icon icon="mdi:target-variant" className="w-5 h-5 text-teal-500" />
-                        Forecast Accuracy — 5-Minute Horizon
-                    </h3>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 leading-relaxed">
-                        Each point compares the AI prediction against what actually happened — both
-                        at the <span className="font-medium text-gray-500 dark:text-gray-400">same future moment (T+5)</span>.
-                        The prediction was made 5 minutes earlier; the actual value is observed when that moment arrives.
-                    </p>
-                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5 flex items-center gap-x-4 flex-wrap">
-                        <span className="flex items-center gap-1.5">
-                            <span className="inline-block w-4 h-0 border-t-2 border-dashed border-violet-500" />
-                            Predicted Demand
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                            <span className="inline-block w-4 h-0.5 bg-teal-500 rounded" />
-                            Actual Demand
-                        </span>
-                        <span className="text-gray-300 dark:text-gray-600">—</span>
-                        <span>Overlapping lines = accurate prediction</span>
-                    </p>
-                </div>
+            <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white tracking-tight">
+                    Forecast Accuracy
+                </h3>
                 <button
                     onClick={exportCsv}
                     disabled={!predictionLog.length}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700/60 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
-                    title="Download full prediction log as CSV"
+                    className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700/60 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                    <Icon icon="mdi:download" className="w-3.5 h-3.5" />
-                    Export CSV
+                    <Icon icon="mdi:download" className="w-3 h-3" />
+                    CSV
                 </button>
             </div>
 
             {/* ── Stat cards ──────────────────────────────────── */}
             {stats && (
-                <div className="grid grid-cols-3 gap-3">
-                    <div className="flex flex-col gap-0.5 px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-blue-500">Mean Abs Error</span>
-                        <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">{stats.mae}</span>
-                        <span className="text-[10px] text-blue-400">pods avg deviation</span>
+                <div className="grid grid-cols-3 gap-px bg-gray-100 dark:bg-gray-700/50 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700/50">
+                    <div className="bg-white dark:bg-darkBackground px-4 py-2.5">
+                        <span className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">MAE</span>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white mt-0.5 tabular-nums">{stats.mae}<span className="text-[10px] text-gray-400 ml-1">pods</span></p>
                     </div>
-                    <div className="flex flex-col gap-0.5 px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30">
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-500">Exact Match</span>
-                        <span className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{stats.exactPct}%</span>
-                        <span className="text-[10px] text-emerald-400">error = 0 pods</span>
+                    <div className="bg-white dark:bg-darkBackground px-4 py-2.5">
+                        <span className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Exact Match</span>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white mt-0.5 tabular-nums">{stats.exactPct}%</p>
                     </div>
-                    <div className="flex flex-col gap-0.5 px-4 py-3 rounded-xl bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-800/30">
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-teal-500">Within ±1 Pod</span>
-                        <span className="text-2xl font-bold text-teal-700 dark:text-teal-300">{stats.within1Pct}%</span>
-                        <span className="text-[10px] text-teal-400">of {stats.n} evaluable predictions{stats.transitionCount > 0 ? ` (· ${stats.transitionCount} rapid-scaling ticks excluded)` : ""}</span>
+                    <div className="bg-white dark:bg-darkBackground px-4 py-2.5">
+                        <span className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Within ±1</span>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white mt-0.5 tabular-nums">{stats.within1Pct}%<span className="text-[10px] text-gray-400 ml-1">of {stats.n}</span></p>
                     </div>
                 </div>
             )}
 
             {/* ── TOP chart: Predicted vs Actual ──────────────── */}
             <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5 flex-wrap">
-                    <span className="inline-block w-5 h-0 border-t-2 border-dashed border-violet-500" />
-                    Predicted Demand (what AI forecasted)
-                    <span className="inline-block w-5 h-0.5 bg-teal-500 rounded ml-3" />
-                    Actual Demand (what really happened)
-                    <span className="inline-block w-5 h-0 border-t-2 border-dashed border-orange-400 ml-3" />
-                    HPA Reactive
-                    <span className="ml-2 text-gray-300 dark:text-gray-600">— both at the same T+5 moment</span>
-                </p>
+                <div className="flex items-center gap-4 text-[11px] text-gray-400 mb-2">
+                    <span className="flex items-center gap-1.5">
+                        <span className="w-4 h-0 border-t border-dashed" style={{ borderColor: '#84006A' }} />
+                        Predicted
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                        <span className="w-4 h-0.5 bg-cyan-500 rounded" />
+                        Actual
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                        <span className="w-4 h-0 border-t border-dashed border-amber-400" />
+                        HPA
+                    </span>
+                </div>
                 <div className="h-[200px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={displayLog} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="gradPred" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.18} />
-                                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.01} />
+                                    <stop offset="0%" stopColor="#84006A" stopOpacity={0.18} />
+                                    <stop offset="100%" stopColor="#84006A" stopOpacity={0.01} />
                                 </linearGradient>
                                 <linearGradient id="gradTruth" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.18} />
-                                    <stop offset="100%" stopColor="#14b8a6" stopOpacity={0.01} />
+                                    <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.18} />
+                                    <stop offset="100%" stopColor="#06b6d4" stopOpacity={0.01} />
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.4} />
@@ -285,42 +266,36 @@ const PredictionAccuracyChart = () => {
                             <Line
                                 type="monotone"
                                 dataKey="actualAtT5"
-                                stroke="#14b8a6"
+                                stroke="#06b6d4"
                                 strokeWidth={2.5}
                                 name="Actual Demand"
-                                dot={{ r: 3, fill: "#14b8a6", stroke: "#fff", strokeWidth: 1.5 }}
+                                dot={{ r: 3, fill: "#06b6d4", stroke: "#fff", strokeWidth: 1.5 }}
                                 activeDot={{ r: 6 }}
                                 animationDuration={300}
                             />
                             <Line
                                 type="monotone"
                                 dataKey="predicted"
-                                stroke="#8b5cf6"
+                                stroke="#84006A"
                                 strokeWidth={2.5}
                                 strokeDasharray="7 4"
                                 name="Predicted Demand"
-                                dot={{ r: 3, fill: "#8b5cf6", stroke: "#fff", strokeWidth: 1.5 }}
+                                dot={{ r: 3, fill: "#84006A", stroke: "#fff", strokeWidth: 1.5 }}
                                 activeDot={{ r: 6 }}
                                 animationDuration={300}
                             />
                             <Line
                                 type="monotone"
                                 dataKey="hpaPods"
-                                stroke="#f97316"
+                                stroke="#f59e0b"
                                 strokeWidth={2}
                                 strokeDasharray="5 5"
                                 name="HPA Reactive"
                                 dot={false}
-                                activeDot={{ r: 5, fill: "#f97316", stroke: "#fff", strokeWidth: 2 }}
+                                activeDot={{ r: 5, fill: "#f59e0b", stroke: "#fff", strokeWidth: 2 }}
                                 animationDuration={300}
                             />
-                            <Legend
-                                wrapperStyle={{ paddingTop: 8 }}
-                                iconType="plainline"
-                                formatter={(value, entry) => (
-                                    <span style={{ color: entry.color, fontSize: 11, fontWeight: 500 }}>{value}</span>
-                                )}
-                            />
+                            {/* using custom key above instead */}
                         </ComposedChart>
                     </ResponsiveContainer>
                 </div>
@@ -367,7 +342,7 @@ const PredictionAccuracyChart = () => {
                     </ResponsiveContainer>
                 </div>
                 <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                    Bars above zero = forecast exceeded demand (over-provisioned) · Below zero = forecast below demand (under-provisioned) · Dashed lines = ±1 pod tolerance
+                    Above zero = over-provisioned · Below = under-provisioned · Dashed = ±1 tolerance
                 </p>
             </div>
         </div>

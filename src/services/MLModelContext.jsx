@@ -106,8 +106,8 @@ const findRealScenarioRows = (type, queue, currentPodCount = 2) => {
     const rowCount = SCENARIO_ROW_COUNT[type] || 20;
     if (pool.length < rowCount) return null;
 
-    const rpsValues = pool.map((r) => parseFloat(r.request_rate_rps || 0));
-    const podValues = pool.map((r) => parseInt(r.current_pod_count) || 2);
+    const rpsValues  = pool.map((r) => parseFloat(r.request_rate_rps || 0));
+    const podValues  = pool.map((r) => parseInt(r.current_pod_count) || 2);
 
     // Normalise RPS so pattern score and pod-proximity score are on similar scales
     const rpsMax = Math.max(...rpsValues) || 1;
@@ -153,10 +153,10 @@ const findRealScenarioRows = (type, queue, currentPodCount = 2) => {
             // Strongest upward linear trend
             const xMean = (n - 1) / 2;
             const yMean = rpsWin.reduce((s, v) => s + v, 0) / n;
-            const num = rpsWin.reduce((s, v, j) => s + (j - xMean) * (v - yMean), 0);
+            const num  = rpsWin.reduce((s, v, j) => s + (j - xMean) * (v - yMean), 0);
             const denX = Math.sqrt(rpsWin.reduce((s, _, j) => s + (j - xMean) ** 2, 0));
             const denY = Math.sqrt(rpsWin.reduce((s, v) => s + (v - yMean) ** 2, 0));
-            const r = denX * denY === 0 ? 0 : num / (denX * denY);
+            const r    = denX * denY === 0 ? 0 : num / (denX * denY);
             const gain = rpsWin[n - 1] - rpsWin[0];
             patternScore = r * 0.7 + gain * 0.3;
 
@@ -237,21 +237,15 @@ export const MLModelProvider = ({ children }) => {
     // spike is running so the model always receives in-distribution input.
     const activeScenarioContextRef = useRef(null); // { type, contextRows, spikeStartIdx }
     const lastRowRef = useRef(null);
-    // Simulated reactive HPA pod count — reacts to current CPU with realistic latency.
-    // Real Kubernetes HPA has three delay sources that make it visibly slower than proactive AI:
-    //   1. Metrics scrape interval (15–30 s)   →  modelled as HPA_REACTION_DELAY ticks
-    //   2. Stabilization window before acting  →  included in the same delay
-    //   3. Pod startup time (image pull + readiness)  →  gradual 1 pod/tick ramp
-    // Kept in refs so state persists across ticks without triggering re-renders.
-    const hpaPodsRef = useRef(2);   // current HPA replica count
-    const hpaPendingTarget = useRef(null); // target after delay expires
-    const hpaDelayCounter = useRef(0);   // ticks remaining before HPA acts
+    // Simulated reactive HPA pod count — reacts to current CPU with scale-down stabilization.
+    // Kept in a ref so scale-down damping persists across ticks without causing re-renders.
+    const hpaPodsRef = useRef(2);
 
     // Prediction result cache — skips the API call when the key inputs haven't changed.
     // Signature encodes the dominant model features (pods, RPS, CPU) rounded to suppress
     // tiny float noise.  Always bypassed inside an injected spike (traffic changes every tick).
     const lastWindowSigRef = useRef(null);
-    const lastPredRef = useRef(null);
+    const lastPredRef      = useRef(null);
 
     // True once scenario candidates are loaded from the full CSV via the local server.
     // When false, scenario injection falls back to the limited simulation-queue pool.
@@ -313,7 +307,7 @@ export const MLModelProvider = ({ children }) => {
         // All signal features come from the REAL queue rows at that position so
         // only current_pod_count is overridden — the model still sees valid data.
         const spikeEndPods = parseInt(stitchedRows[stitchedRows.length - 1].current_pod_count) || 2;
-        const resumePods = parseInt(simulationQueue[insertAt]?.current_pod_count) || 2;
+        const resumePods   = parseInt(simulationQueue[insertAt]?.current_pod_count) || 2;
         const podDropDelta = spikeEndPods - resumePods;
         const rampDownRows = [];
         if (podDropDelta > MAX_POD_STEP) {
@@ -336,7 +330,7 @@ export const MLModelProvider = ({ children }) => {
         // Invalidate the prediction cache so the first spike tick always fires a
         // live API call — the traffic pattern has just changed dramatically.
         lastWindowSigRef.current = null;
-        lastPredRef.current = null;
+        lastPredRef.current      = null;
 
         // Store context for lookback-window override in the tick handler.
         // contextRows is null when falling back to queue-based selection.
@@ -446,7 +440,7 @@ export const MLModelProvider = ({ children }) => {
                     clearPredictions();
                     setPredictionLog([]);
                     errorHistory.current = [];
-                    provisioningStats.current = { under: 0, exact: 0, over: 0, total: 0 }; setIsSimulating(true);
+                    provisioningStats.current = { under: 0, exact: 0, over: 0, total: 0 };                    setIsSimulating(true);
                 }
             })
             .catch((err) => console.error("Simulation fetch error:", err));
@@ -467,7 +461,7 @@ export const MLModelProvider = ({ children }) => {
             .catch((err) => console.warn("Scenario candidates unavailable:", err.message));
 
         return () => { if (healthRetryTimer) clearTimeout(healthRetryTimer); };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Main simulation tick
@@ -559,7 +553,7 @@ export const MLModelProvider = ({ children }) => {
             // Dominant features: pod count, RPS, CPU usage.  During an injected spike every
             // tick is actively changing, so the cache is always bypassed there.
             const windowSig = `${actualPods}-${Math.round(requestRate)}-${Math.round(cpuUsage)}`;
-            const canReuse = !row._isSpike
+            const canReuse  = !row._isSpike
                 && lastWindowSigRef.current === windowSig
                 && lastPredRef.current !== null;
 
@@ -572,7 +566,7 @@ export const MLModelProvider = ({ children }) => {
                     predictedPodsAtT5 = Math.round(resp.predicted_pods) || actualPods;
                     setApiLatency(Math.round(performance.now() - t0));
                     lastWindowSigRef.current = windowSig;
-                    lastPredRef.current = predictedPodsAtT5;
+                    lastPredRef.current      = predictedPodsAtT5;
                 } catch (e) {
                     console.error("Prediction error:", e.message);
                 }
@@ -585,55 +579,15 @@ export const MLModelProvider = ({ children }) => {
 
             // ── Simulate reactive HPA baseline ────────────────────────────────────
             // Standard Kubernetes HPA: desiredReplicas = ceil(current × cpuUsage / target)
-            // CPU target = 65 %.
-            //
-            // LATENCY MODEL (matches real-world Kubernetes behaviour):
-            //   • Detection delay : HPA_REACTION_DELAY ticks (~2 min) before HPA
-            //     even recognises the need to scale — simulates the metrics scrape
-            //     interval (15–30 s) + stabilization window.
-            //   • Scale-up ramp   : after the decision, pods spin up gradually at
-            //     1 pod per tick (image pull + readiness probe ≈ 30–90 s each).
-            //   • Scale-down      : conservative — max 1 pod removed per tick
-            //     (real HPA default stabilization = 5 min).
-            //
-            // This creates a visible latency gap versus the proactive AI forecaster,
-            // clearly demonstrating the research advantage of predictive scaling.
-            // ─────────────────────────────────────────────────────────────────────
-            const HPA_REACTION_DELAY = 2; // ticks before HPA begins responding
+            // CPU target = 65%.  Scale-up: immediate.  Scale-down: stabilised (1 pod/tick max).
+            // This gives users a direct visual comparison: proactive AI vs reactive HPA.
             const hpaCpuTarget = 65;
             const rawHpaPods = Math.ceil(actualPods * (cpuUsage / hpaCpuTarget));
-            const desiredHpa = Math.max(2, Math.min(rawHpaPods, 30));
-            const prevHpa = hpaPodsRef.current;
-            let hpaPods = prevHpa;
-
-            if (desiredHpa > prevHpa) {
-                // ── Scale-up path: delayed reaction + gradual ramp ──────────
-                if (hpaPendingTarget.current === null || desiredHpa > hpaPendingTarget.current) {
-                    // New (or higher) scale-up demand detected — start the delay counter
-                    hpaPendingTarget.current = desiredHpa;
-                    hpaDelayCounter.current = HPA_REACTION_DELAY;
-                }
-                if (hpaDelayCounter.current > 0) {
-                    // Still waiting — HPA hasn't reacted yet (metrics lag)
-                    hpaDelayCounter.current -= 1;
-                    hpaPods = prevHpa; // no change during detection window
-                } else {
-                    // Delay expired — ramp up 1 pod per tick (container spin-up)
-                    hpaPods = Math.min(prevHpa + 1, hpaPendingTarget.current);
-                    if (hpaPods >= hpaPendingTarget.current) {
-                        hpaPendingTarget.current = null; // target reached
-                    }
-                }
-            } else if (desiredHpa < prevHpa) {
-                // ── Scale-down: conservative 1 pod/tick stabilisation ────────
-                hpaPods = Math.max(desiredHpa, prevHpa - 1);
-                hpaPendingTarget.current = null;
-                hpaDelayCounter.current = 0;
-            } else {
-                // No change needed
-                hpaPendingTarget.current = null;
-                hpaDelayCounter.current = 0;
-            }
+            const clampedHpa  = Math.max(2, Math.min(rawHpaPods, 30));
+            const prevHpa     = hpaPodsRef.current;
+            const hpaPods     = clampedHpa >= prevHpa
+                ? clampedHpa                       // scale-up: immediate
+                : Math.max(clampedHpa, prevHpa - 1); // scale-down: 1 pod/tick stabilisation
             hpaPodsRef.current = hpaPods;
             // ─────────────────────────────────────────────────────────────────────
 
@@ -770,7 +724,7 @@ export const MLModelProvider = ({ children }) => {
         }, SIMULATION_INTERVAL_MS);
 
         return () => clearInterval(interval);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isSimulating, isApiHealthy, simulationQueue]);
 
     return (
