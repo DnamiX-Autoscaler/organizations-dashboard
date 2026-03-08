@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
-import { alertsData as staticAlertsData } from "../../../data";
+import { rollbackHistoryData } from "../../../data";
 import TitleHeader from "../../../components/common/TitleHeader";
 import TabSection from "../../../components/common/TabSection";
 import FilterDropdown from "../../../components/common/FilterDropdown";
@@ -25,7 +25,7 @@ const statusStyles = {
 };
 
 const Alerts = () => {
-  const alertsData = useAlertsSSE(staticAlertsData);
+  const alertsData = useAlertsSSE([]);
   const [activeTab, setActiveTab] = useState("active");
   const [selectedService, setSelectedService] = useState("");
   const [selectedSeverity, setSelectedSeverity] = useState("");
@@ -33,17 +33,17 @@ const Alerts = () => {
 
   const serviceOptions = useMemo(
     () => [...new Set(alertsData.map((item) => item.service))].map((service) => ({ value: service, label: service })),
-    []
+    [alertsData]
   );
 
   const severityOptions = useMemo(
     () => [...new Set(alertsData.map((item) => item.severity))].map((severity) => ({ value: severity, label: severity })),
-    []
+    [alertsData]
   );
 
   const statusOptions = useMemo(
     () => [...new Set(alertsData.map((item) => item.status))].map((status) => ({ value: status, label: status })),
-    []
+    [alertsData]
   );
 
   const extractUnit = (threshold) => {
@@ -73,6 +73,38 @@ const Alerts = () => {
     return `${Math.floor(hours / 24)}d ago`;
   };
 
+  // Find rollback history for an alert
+  const getRollbackHistory = (alert) => {
+    const isRollbackRelated = 
+      alert.action?.toLowerCase().includes("rollback") || 
+      alert.status === "ROLLED_BACK" ||
+      alert.description?.toLowerCase().includes("rollback") ||
+      alert.rollback; // Check for API rollback data
+    
+    if (!isRollbackRelated) return null;
+
+    // If alert has rollback data from API, return it
+    if (alert.rollback) {
+      return {
+        hasApiRollback: true,
+        apiData: alert.rollback,
+        validation: alert.validation,
+        details: alert.details
+      };
+    }
+
+    // Otherwise, find matching rollback history entries from static data
+    const matchingRollbacks = rollbackHistoryData.filter(rb => {
+      const serviceMatch = alert.service?.toLowerCase().includes(rb.deployment?.replace(/-/g, ' ')) ||
+                          rb.deployment?.toLowerCase().includes(alert.service?.toLowerCase().split(' ')[0]);
+      const projectMatch = alert.project?.toLowerCase().replace(/\s+/g, '-') === rb.project?.toLowerCase();
+      
+      return serviceMatch || projectMatch;
+    }).slice(0, 2); // Show max 2 rollback entries
+
+    return matchingRollbacks.length > 0 ? { hasApiRollback: false, staticData: matchingRollbacks } : null;
+  };
+
   const filteredData = useMemo(
     () =>
       alertsData.filter((item) => {
@@ -81,7 +113,7 @@ const Alerts = () => {
         if (selectedStatus && item.status !== selectedStatus) return false;
         return true;
       }),
-    [selectedService, selectedSeverity, selectedStatus]
+    [alertsData, selectedService, selectedSeverity, selectedStatus]
   );
 
   const viewData = useMemo(
@@ -159,7 +191,7 @@ const Alerts = () => {
           <div className="flex flex-col">
             <span className="font-medium text-gray-900 dark:text-gray-100">{item.rule}</span>
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              {item.environment.toUpperCase()} • {item.node}
+              {item.environment ? item.environment.toUpperCase() : 'N/A'} • {item.node}
             </span>
           </div>
         </div>
@@ -221,25 +253,33 @@ const Alerts = () => {
       </div>
 
       <div className="grid gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="p-4 border rounded-xl bg-gradient-to-br from-rose-50 to-white dark:from-rose-900/20 dark:to-darkBackground border-rose-100 dark:border-rose-800">
-          <p className="text-xs text-rose-600 dark:text-rose-200">Open</p>
-          <p className="mt-1 text-3xl font-bold text-rose-700 dark:text-rose-100">{stats.open}</p>
-          <p className="text-xs text-rose-500 dark:text-rose-300">Require immediate action</p>
+        <div className="p-4 border-2 rounded-lg bg-white dark:bg-gray-900 border-rose-300 dark:border-rose-700">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Open</p>
+            <Icon icon="mdi:alert-circle" className="w-5 h-5 text-rose-500" />
+          </div>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.open}</p>
         </div>
-        <div className="p-4 border rounded-xl bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-darkBackground border-indigo-100 dark:border-indigo-800">
-          <p className="text-xs text-indigo-600 dark:text-indigo-200">Acknowledged</p>
-          <p className="mt-1 text-3xl font-bold text-indigo-700 dark:text-indigo-100">{stats.acknowledged}</p>
-          <p className="text-xs text-indigo-500 dark:text-indigo-300">Being handled</p>
+        <div className="p-4 border-2 rounded-lg bg-white dark:bg-gray-900 border-indigo-300 dark:border-indigo-700">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Acknowledged</p>
+            <Icon icon="mdi:eye-check" className="w-5 h-5 text-indigo-500" />
+          </div>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.acknowledged}</p>
         </div>
-        <div className="p-4 border rounded-xl bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-darkBackground border-emerald-100 dark:border-emerald-800">
-          <p className="text-xs text-emerald-600 dark:text-emerald-200">Resolved</p>
-          <p className="mt-1 text-3xl font-bold text-emerald-700 dark:text-emerald-100">{stats.resolved}</p>
-          <p className="text-xs text-emerald-500 dark:text-emerald-300">Cleared in the last window</p>
+        <div className="p-4 border-2 rounded-lg bg-white dark:bg-gray-900 border-emerald-300 dark:border-emerald-700">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Resolved</p>
+            <Icon icon="mdi:check-circle" className="w-5 h-5 text-emerald-500" />
+          </div>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.resolved}</p>
         </div>
-        <div className="p-4 border rounded-xl bg-gradient-to-br from-red-50 to-white dark:from-red-900/20 dark:to-darkBackground border-red-100 dark:border-red-800">
-          <p className="text-xs text-red-600 dark:text-red-200">Critical</p>
-          <p className="mt-1 text-3xl font-bold text-red-700 dark:text-red-100">{stats.critical}</p>
-          <p className="text-xs text-red-500 dark:text-red-300">Highest severity signals</p>
+        <div className="p-4 border-2 rounded-lg bg-white dark:bg-gray-900 border-red-300 dark:border-red-700">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Critical</p>
+            <Icon icon="mdi:fire" className="w-5 h-5 text-red-500" />
+          </div>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.critical}</p>
         </div>
       </div>
 
@@ -282,88 +322,129 @@ const Alerts = () => {
 
             return (
               <div
-                key={item.id}
-                className="p-5 border rounded-xl bg-white dark:bg-darkBackground border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg transition-all duration-300"
+                key={item.id || item._id}
+                className={`p-4 border rounded-lg bg-white dark:bg-gray-900 ${
+                  item.severity === 'critical' 
+                    ? 'border-red-400' 
+                    : item.severity === 'high'
+                    ? 'border-orange-400'
+                    : 'border-gray-300 dark:border-gray-700'
+                }`}
               >
-                {/* Header with Alert Icon and Badges */}
-                <div className="flex items-start gap-3 mb-4">
-                  <div className="p-2 rounded-lg bg-red-50 dark:bg-red-900/20">
-                    <Icon icon="mdi:alert-decagram" className="w-5 h-5 text-red-600 dark:text-red-400" />
+                {/* Header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${severityStyles[item.severity]}`}>
+                      {item.severity}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${statusStyles[item.status]}`}>
+                      {item.status.replace('_', ' ')}
+                    </span>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{item.rule}</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`px-2 py-1 rounded-full text-[11px] font-semibold uppercase ${severityStyles[item.severity]}`}>
-                        {item.severity}
-                      </span>
-                      <span className={`px-2 py-1 rounded-full text-[11px] font-semibold capitalize ${statusStyles[item.status]}`}>
-                        {item.status}
-                      </span>
-                    </div>
-                  </div>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{formatRelative(item.lastSeen || item.triggeredAt)}</span>
                 </div>
 
-                {/* Project and Service Info */}
-                <div className="mb-4 space-y-2">
-                  <div className={`flex items-center gap-2 p-2 rounded-lg ${projectStyle.bg} ${projectStyle.border} border`}>
-                    <Icon icon={projectStyle.icon} className={`w-4 h-4 ${projectStyle.text}`} />
-                    <div className="flex-1">
-                      <p className={`text-xs font-bold ${projectStyle.text}`}>{item.project}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-darkBackgroundVery">
-                    <Icon icon="mdi:server" className="w-4 h-4 text-primary" />
-                    <div className="flex-1">
-                      <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">{item.service}</p>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400">{item.source} • {item.environment.toUpperCase()}</p>
-                    </div>
-                  </div>
-                </div>
+                {/* Service & Project */}
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">
+                  {item.service}
+                </h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">{item.project}</p>
 
                 {/* Alert Description */}
                 {item.description && (
-                  <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg">
-                    <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
-                      <Icon icon="mdi:information-outline" className="inline w-3.5 h-3.5 mr-1" />
-                      {item.description}
-                    </p>
-                  </div>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 mb-3">
+                    {item.description}
+                  </p>
                 )}
 
-                {/* Metrics */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-darkBackgroundVery text-sm mb-3">
-                  <div className="flex items-center gap-2">
-                    <Icon icon="mdi:chart-areaspline" className="w-4 h-4 text-primary" />
-                    <div className="flex flex-col">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Current</span>
-                      <span className="font-semibold text-gray-900 dark:text-gray-100">
-                        {item.currentValue}
-                        {extractUnit(item.threshold) ? ` ${extractUnit(item.threshold)}` : ""}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Icon icon="mdi:axis-arrow" className="w-4 h-4 text-gray-500" />
-                    <div className="flex flex-col text-right">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Threshold</span>
-                      <span className="font-semibold text-gray-900 dark:text-gray-100">{item.threshold}</span>
-                    </div>
-                  </div>
-                </div>
+                {/* Rollback Details */}
+                {(() => {
+                  const rollbackData = getRollbackHistory(item);
+                  if (!rollbackData) return null;
 
-                {/* Footer with Time and Action */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-2">
-                    <Icon icon="mdi:clock-outline" className="w-4 h-4 text-gray-400" />
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                      {formatRelative(item.lastSeen || item.triggeredAt)}
+                  return (
+                    <div className="mb-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-400 dark:border-yellow-600 rounded">
+                      <p className="text-xs font-semibold text-yellow-900 dark:text-yellow-200 mb-2">
+                        🔄 Rollback
+                      </p>
+                      
+                      {/* API Rollback Data */}
+                      {rollbackData.hasApiRollback && (
+                        <div className="space-y-2">
+                          <p className="text-xs text-gray-700 dark:text-gray-300">
+                            {rollbackData.apiData.reason}
+                          </p>
+                            
+                          <div className="flex gap-3 text-xs">
+                            <div>
+                              <span className="text-gray-600 dark:text-gray-400">Replicas:</span>
+                              <span className="font-semibold ml-1 text-gray-900 dark:text-white">
+                                {rollbackData.apiData.previousReplicas} → {rollbackData.apiData.rolledBackTo}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600 dark:text-gray-400">Score:</span>
+                              <span className="font-semibold ml-1 text-gray-900 dark:text-white">
+                                {(rollbackData.apiData.resilienceScore * 100).toFixed(0)}%
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Failed Metrics */}
+                          {rollbackData.validation?.metricsEvaluation && (
+                            <div className="pt-2 border-t border-yellow-300 dark:border-gray-700">
+                              <p className="text-xs text-red-600 dark:text-red-400 mb-1">Failed Metrics:</p>
+                              {rollbackData.validation.metricsEvaluation
+                                .filter(m => m.tier === "FAILED")
+                                .slice(0, 2)
+                                .map((metric, idx) => (
+                                  <div key={idx} className="text-xs">
+                                    <span className="text-gray-600 dark:text-gray-400">
+                                      {metric.metric.replace(/([A-Z])/g, ' $1').trim()}:
+                                    </span>
+                                    <span className="font-semibold ml-1 text-red-700 dark:text-red-300">
+                                      {typeof metric.value === 'number' ? metric.value.toFixed(1) : metric.value}
+                                    </span>
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Static Rollback Data */}
+                      {!rollbackData.hasApiRollback && rollbackData.staticData && (
+                        <div className="space-y-2">
+                          {rollbackData.staticData.map((rb, idx) => (
+                            <div key={idx} className="text-xs">
+                              <p className="font-semibold mb-1 text-gray-900 dark:text-gray-100">{rb.deployment}</p>
+                              <p className="text-gray-600 dark:text-gray-400 mb-1">{rb.reason}</p>
+                              <div className="flex gap-3 text-gray-700 dark:text-gray-300">
+                                <span>Replicas: {rb.previousReplicas} → {rb.appliedReplicas}</span>
+                                <span>Success: {rb.metrics?.successRate}%</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Metrics */}
+                <div className="flex items-center justify-between text-xs border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">Current:</span>
+                    <span className="font-bold ml-1 text-gray-900 dark:text-gray-100">
+                      {item.currentValue}{extractUnit(item.threshold)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-md">
-                    <Icon icon="mdi:cog" className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                    <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-300">{item.action}</span>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">Target:</span>
+                    <span className="font-bold ml-1 text-gray-900 dark:text-gray-100">{item.threshold}</span>
+                  </div>
+                  <div>
+                    <span className="text-blue-600 dark:text-blue-400 font-semibold">{item.action}</span>
                   </div>
                 </div>
               </div>

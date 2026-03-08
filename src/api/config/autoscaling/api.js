@@ -1,4 +1,4 @@
-import AUTOSCALING_ENDPOINTS from "./endpoind";
+import AUTOSCALING_ENDPOINTS from "./endpoint";
 
 const envBaseUrl = import.meta.env.VITE_Auto_Scaling_Base_Url;
 const BASE_URL = import.meta.env.DEV
@@ -112,6 +112,42 @@ export const publishAlert = async (alertData) => {
         return await response.json();
     } catch (err) {
         console.error("Error publishing alert:", err);
+        throw err;
+    }
+};
+
+/**
+ * Get scale with metrics data with pagination
+ * @param {Object} options - Pagination options
+ * @param {number} options.page - Page number (default: 1)
+ * @param {number} options.limit - Records per page (default: 10)
+ * 
+ * @example
+ * // Get paginated records
+ * getScaleWithMetrics({ page: 1, limit: 10 })
+ */
+export const getScaleWithMetrics = async (options = {}) => {
+    const { page = 1, limit = 10 } = options;
+    
+    try {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString()
+        });
+        
+        const url = `${BASE_URL}${AUTOSCALING_ENDPOINTS.SCALE_WITH_METRICS.GET}?${params}`;
+        console.log(`📊 Fetching scale with metrics: ${url}`);
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return data;
+    } catch (err) {
+        console.error("Error fetching scale with metrics:", err);
         throw err;
     }
 };

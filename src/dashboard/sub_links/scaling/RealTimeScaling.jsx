@@ -3,7 +3,6 @@ import { Icon } from "@iconify/react";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import realTimeScalingData from "../../../data/realTimeScalingData";
 import { getScalingEventsStream, getDeploymentStatusStream } from "../../../api/config/autoscaling/api";
-import ChaosAnalysis from "./ChaosAnalysis";
 
 const RealTimeScaling = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -512,10 +511,7 @@ const RealTimeScaling = () => {
                 </div>
             </div>
 
-            {/* Chaos Experiment & Recovery Analysis Section */}
-            <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
-                <ChaosAnalysis />
-            </div>
+           
         </div>
     );
 };
