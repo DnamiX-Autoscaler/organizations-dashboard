@@ -125,9 +125,10 @@ export const mockRunningPods = [
 
 // Function to get status badge color
 export const getStatusColor = (status) => {
-    const statusLower = status.toLowerCase();
+    const statusLower = status?.toLowerCase() ?? "";
     if (statusLower === "running") return "green";
     if (statusLower === "error") return "red";
+    if (statusLower === "failed") return "red";
     if (statusLower === "crashloopbackoff") return "orange";
     if (statusLower === "pending") return "yellow";
     if (statusLower === "succeeded") return "blue";
@@ -155,7 +156,7 @@ export const fetchRunningPods = async () => {
 export const getPodStatistics = (pods) => {
     const running = pods.filter((p) => p.status === "Running").length;
     const error = pods.filter(
-        (p) => p.status === "Error" || p.status === "CrashLoopBackOff"
+        (p) => p.status === "Error" || p.status === "Failed" || p.status === "CrashLoopBackOff"
     ).length;
     const pending = pods.filter((p) => p.status === "Pending").length;
     const total = pods.length;

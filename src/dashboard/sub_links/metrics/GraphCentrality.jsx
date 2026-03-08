@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import TitleHeader from "../../../components/common/TitleHeader";
-import graphCentralityData from "../../../data/graphCentrality";
+import graphCentralityService from "../../../api/services/metrics/graph_centrality";
 import CentralityCard from "../../../components/metrics/graph_centrality/CentralityCard";
 import ServiceCentralityTable from "../../../components/metrics/graph_centrality/ServiceCentralityTable";
 import CentralityComparison from "../../../components/metrics/graph_centrality/CentralityComparison";
@@ -11,66 +11,67 @@ import AdditionalInsights from "../../../components/metrics/graph_centrality/Add
 import MLBenefitsExplanation from "../../../components/metrics/graph_centrality/MLBenefitsExplanation";
 import GraphCentralityGuide from "../../../components/metrics/graph_centrality/GraphCentralityGuide";
 
+const MAX_RETRIES = 5;
+
 const GraphCentrality = () => {
-  const [data, setData] = useState(graphCentralityData);
+  const [data, setData] = useState({ services: [], connections: [], insights: {} });
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState(null);
   const [viewMode, setViewMode] = useState("overview"); // 'overview', 'table', 'comparison', 'guide'
 
-  // Simulate real-time updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setData((prevData) => ({
-        ...prevData,
-        services: prevData.services.map((service) => ({
-          ...service,
-          degree_centrality: Math.min(
-            1,
-            Math.max(
-              0,
-              service.degree_centrality + (Math.random() * 0.04 - 0.02)
-            )
-          ),
-          betweenness_centrality: Math.min(
-            1,
-            Math.max(
-              0,
-              service.betweenness_centrality + (Math.random() * 0.04 - 0.02)
-            )
-          ),
-          closeness_centrality: Math.min(
-            1,
-            Math.max(
-              0,
-              service.closeness_centrality + (Math.random() * 0.04 - 0.02)
-            )
-          ),
-          eigenvector_centrality: Math.min(
-            1,
-            Math.max(
-              0,
-              service.eigenvector_centrality + (Math.random() * 0.04 - 0.02)
-            )
-          ),
-        })),
-      }));
-    }, 3000);
+  const abortRef = useRef(null);
+  const retryRef = useRef(0);
 
-    return () => clearInterval(interval);
+  // SSE stream
+  useEffect(() => {
+    const connect = () => {
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      graphCentralityService.connectLiveStream({
+        signal: controller.signal,
+        onOpen: () => {
+          setIsConnected(true);
+          setError(null);
+          retryRef.current = 0;
+        },
+        onMessage: (parsed) => {
+          if (parsed && parsed.services) {
+            setData(parsed);
+          }
+        },
+        onError: (err) => {
+          setIsConnected(false);
+          setError(err?.message ?? "Stream error");
+          if (retryRef.current < MAX_RETRIES) {
+            retryRef.current += 1;
+            setTimeout(connect, 2000 * retryRef.current);
+          }
+        },
+      });
+    };
+
+    connect();
+    return () => {
+      abortRef.current?.abort();
+    };
   }, []);
 
   // Calculate average centrality metrics
+  const serviceCount = data.services.length || 1;
   const avgCentrality = {
     degree:
       data.services.reduce((sum, s) => sum + s.degree_centrality, 0) /
-      data.services.length,
+      serviceCount,
     betweenness:
       data.services.reduce((sum, s) => sum + s.betweenness_centrality, 0) /
-      data.services.length,
+      serviceCount,
     closeness:
       data.services.reduce((sum, s) => sum + s.closeness_centrality, 0) /
-      data.services.length,
+      serviceCount,
     eigenvector:
       data.services.reduce((sum, s) => sum + s.eigenvector_centrality, 0) /
-      data.services.length,
+      serviceCount,
   };
 
   return (
@@ -88,10 +89,25 @@ const GraphCentrality = () => {
 
       {/* Live Indicator */}
       {viewMode !== "guide" && (
-        <div className="flex items-center gap-2 px-4 py-2 border border-green-200 rounded-lg bg-green-50 dark:bg-green-900/20 dark:border-green-800">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-sm font-medium text-green-700 dark:text-green-400">
-            Live graph analysis - Metrics update every 3 seconds
+        <div className={`flex items-center gap-2 px-4 py-2 border rounded-lg ${isConnected
+            ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+            : error
+              ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
+              : "bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800"
+          }`}>
+          <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : error ? "bg-red-500" : "bg-yellow-500 animate-pulse"
+            }`} />
+          <span className={`text-sm font-medium ${isConnected
+              ? "text-green-700 dark:text-green-400"
+              : error
+                ? "text-red-700 dark:text-red-400"
+                : "text-yellow-700 dark:text-yellow-400"
+            }`}>
+            {isConnected
+              ? "Live graph analysis — SSE stream connected"
+              : error
+                ? `Connection error — ${error}`
+                : "Connecting to live stream…"}
           </span>
         </div>
       )}

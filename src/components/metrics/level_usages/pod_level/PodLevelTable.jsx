@@ -4,50 +4,72 @@ import Table from "../../../common/Table";
 const PodLevelTable = ({ data }) => {
   const columns = [
     {
+      key: "service_name",
+      label: "Service Name",
+      bold: true,
+      icon: "mdi:cube-outline",
+    },
+    {
+      key: "namespace",
+      label: "Namespace",
+      icon: "mdi:folder-network-outline",
+    },
+    {
+      key: "timestamp",
+      label: "Timestamp",
+      icon: "mdi:clock-outline",
+    },
+    {
       key: "current_pod_count",
       label: "Pod Count",
-      bold: true,
-      icon: "fluent:leaf-two-24-regular",
+      icon: "mdi:layers-triple",
     },
     {
       key: "pod_cpu_usage_percent_avg",
       label: "CPU Avg (%)",
-      icon: "fluent:leaf-two-24-regular",
+      icon: "mdi:cpu-64-bit",
     },
     {
       key: "pod_cpu_usage_percent_p95",
       label: "CPU P95 (%)",
-      icon: "fluent:leaf-two-24-regular",
+      icon: "mdi:cpu-64-bit",
     },
     {
       key: "pod_memory_usage_mb_avg",
       label: "Memory Avg (MB)",
-      icon: "fluent:leaf-two-24-regular",
+      icon: "mdi:memory",
     },
     {
       key: "pod_memory_usage_mb_p95",
       label: "Memory P95 (MB)",
-      icon: "fluent:leaf-two-24-regular",
+      icon: "mdi:memory",
     },
     {
       key: "pod_restart_count",
       label: "Restart Count",
-      icon: "fluent:leaf-two-24-regular",
+      icon: "mdi:restart",
     },
     {
       key: "pod_cpu_limit_percent",
       label: "CPU Limit (%)",
-      icon: "fluent:leaf-two-24-regular",
+      icon: "mdi:gauge",
     },
     {
       key: "pod_memory_limit_percent",
-      label: "Memory Limit (%)",
-      icon: "fluent:leaf-two-24-regular",
+      label: "Memory Limit (MB)",
+      icon: "mdi:gauge",
     },
   ];
 
+  const tableData = data.map((item) => ({
+    ...item,
+    timestamp: item.timestamp
+      ? new Date(item.timestamp).toLocaleString()
+      : "-",
+  }));
+
   return (
-    <Table columns={columns} data={data} empty="No pod-level data available" />
+    <Table columns={columns} data={tableData} empty="No pod-level data available" />
   );
 };
 

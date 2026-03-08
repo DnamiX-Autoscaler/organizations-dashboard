@@ -20,8 +20,8 @@ const SUB_MENUS = {
     { id: "level-usages", label: "Level Usages", hasNotification: false },
     { id: "graph-centrality", label: "Graph Centrality", hasNotification: false },
     { id: "indexes", label: "Indexes", hasNotification: false },
+    { id: "configurations", label: "Configurations", hasNotification: false },
     { id: "explore", label: "Explore", hasNotification: false },
-    { id: "configurartions", label: "Configurartions", hasNotification: false },
     { id: "running-pods", label: "Running Pods", hasNotification: false },
     { id: "services", label: "Services", hasNotification: false },
     { id: "prometheus-ips", label: "Prometheus IPs", hasNotification: false },
@@ -39,6 +39,7 @@ const SUB_MENUS = {
   scaling: [
     { id: "event", label: "Scaling Event", hasNotification: false },
     { id: "metrics", label: "Resilience Metrics", hasNotification: false },
+    { id: "chaos-analysis", label: "Chaos Analysis", hasNotification: false },
     { id: "real-time-scaling", label: "Real-Time Scaling", hasNotification: false },
     { id: "health", label: "Deployment Health", hasNotification: false },
     { id: "alerts", label: "Alerts", hasNotification: true },
