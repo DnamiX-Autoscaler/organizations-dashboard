@@ -1,143 +1,183 @@
-/**
- * DataGenerator.js
- * Generates mock data for the ML Model Dashboard.
- */
+const API_BASE = import.meta.env.VITE_EXECUTOR_API ?? "http://localhost:6000";
 
-const generateTimeLabels = (count) => {
-  const labels = [];
-  const now = new Date();
-  for (let i = count; i > 0; i--) {
-    const d = new Date(now.getTime() - i * 60000); // Minutes ago
-    labels.push(d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
-  }
-  return labels;
+const WINDOW_SIZE = 48;
+const ROW_WIDTH = 21;
+
+const rand = (min, max) => Math.random() * (max - min) + min;
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const buildTimeLabel = (minutesBack) => {
+    const d = new Date(Date.now() - minutesBack * 60000);
+    return d.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    });
 };
 
-// Generate a single row of 21 features with wave-like patterns for ML consistency
-export const generateRandomFeatureRow = (currentPods, step = 0) => {
-  // 20 features + 1 target
-  const row = [];
-  
-  // Base patterns using sine waves to simulate daily/hourly traffic
-  const baseWave = Math.sin(step * 0.1) * 0.5 + 0.5; // 0 to 1
-  const noise = () => (Math.random() - 0.5) * 0.2; // +/- 0.1 noise
+// Generates a single row in the backend order:
+// 20 features + current_pod_count (last column), total width = 21.
+export const generateRandomFeatureRow = (currentPods = 3, idx = 0) => {
+    const pods = Math.max(1, Number(currentPods) || 3);
+    const dayProgress = (idx % WINDOW_SIZE) / WINDOW_SIZE;
+    const diurnal = Math.sin(dayProgress * Math.PI * 2);
+    const inverseDiurnal = Math.cos(dayProgress * Math.PI * 2);
 
-  // Feature scales match actual data.csv observations:
-  //   RPS: 17–780 (simulation zone 17–780; typical 50–250)
-  //   Latency p95: 50–200 ms
-  //   CPU avg: 20–60 %
-  //   Memory avg: 470–680 MB
+    const requestRate = rand(180, 620) * (1 + 0.12 * diurnal);
+    const latencyP95 = rand(35, 120) * (1 + 0.08 * inverseDiurnal);
+    const latencyP99 = latencyP95 * rand(1.08, 1.35);
+    const errorRatePct = clamp(rand(0.05, 1.5), 0.01, 5);
+    const queueLength = Math.max(0, rand(2, 40));
 
-  // 1. request_rate_rps
-  row.push(50 + baseWave * 200 + noise() * 30);
+    const cpuAvg = clamp(rand(30, 70) + pods * 0.8, 5, 99);
+    const cpuP95 = clamp(cpuAvg + rand(4, 15), 5, 100);
+    const memAvg = clamp(rand(240, 680) + pods * 20, 80, 4096);
+    const memP95 = clamp(memAvg + rand(30, 180), 100, 4096);
 
-  // 2-3. latency (slightly correlated with load)
-  row.push(50 + baseWave * 80 + noise() * 10);   // p95
-  row.push(70 + baseWave * 120 + noise() * 15);  // p99
+    const hourSin = diurnal;
+    const hourCos = inverseDiurnal;
+    const daySin = Math.sin(dayProgress * Math.PI);
+    const dayCos = Math.cos(dayProgress * Math.PI);
 
-  // 4. error rate (spikes rarely, low base)
-  row.push(Math.max(0, Math.random() > 0.9 ? Math.random() * 0.5 : 0.035));
+    const meshInboundRps = requestRate * rand(0.85, 1.2);
+    const meshInboundLatencyP95 = latencyP95 * rand(0.9, 1.25);
+    const meshInboundErrorRate = clamp(errorRatePct / 100 * rand(0.8, 1.25), 0, 1);
 
-  // 5. queue length
-  row.push(Math.floor(baseWave * 20 + Math.random() * 5));
+    const degreeCentrality = clamp(rand(0.15, 0.85), 0, 1);
+    const eigenvectorCentrality = clamp(rand(0.05, 0.95), 0, 1);
+    const betweennessCentrality = clamp(rand(0.01, 0.7), 0, 1);
+    const closenessCentrality = clamp(rand(0.1, 0.95), 0, 1);
 
-  // 6-9. CPU/Mem (correlated with load)
-  row.push(20 + baseWave * 20 + noise() * 4);   // CPU avg %
-  row.push(28 + baseWave * 28 + noise() * 5);   // CPU p95 %
-  row.push(470 + baseWave * 130 + noise() * 30); // Mem avg MB
-  row.push(520 + baseWave * 150 + noise() * 35); // Mem p95 MB
-
-  // 10-13. Time encoding
-  row.push(Math.sin(step * 0.05));
-  row.push(Math.cos(step * 0.05));
-  row.push(Math.sin(step * 0.01));
-  row.push(Math.cos(step * 0.01));
-
-  // 14-16. Mesh stats (closely track request_rate_rps)
-  row.push(45 + baseWave * 190 + noise() * 25);
-  row.push(50 + baseWave * 75 + noise() * 8);
-  row.push(0.035 + noise() * 0.004);
-
-  // 17-20. Centrality (relatively static)
-  row.push(0.5 + noise());
-  row.push(0.4 + noise());
-  row.push(0.3 + noise());
-  row.push(0.6 + noise());
-  
-  // 21. Current Pod Count (Target)
-  row.push(currentPods);
-  
-  return row;
+    return [
+        Number(requestRate.toFixed(2)),
+        Number(latencyP95.toFixed(2)),
+        Number(latencyP99.toFixed(2)),
+        Number(errorRatePct.toFixed(4)),
+        Number(queueLength.toFixed(2)),
+        Number(cpuAvg.toFixed(2)),
+        Number(cpuP95.toFixed(2)),
+        Number(memAvg.toFixed(2)),
+        Number(memP95.toFixed(2)),
+        Number(hourSin.toFixed(6)),
+        Number(hourCos.toFixed(6)),
+        Number(daySin.toFixed(6)),
+        Number(dayCos.toFixed(6)),
+        Number(meshInboundRps.toFixed(2)),
+        Number(meshInboundLatencyP95.toFixed(2)),
+        Number(meshInboundErrorRate.toFixed(6)),
+        Number(degreeCentrality.toFixed(6)),
+        Number(eigenvectorCentrality.toFixed(6)),
+        Number(betweennessCentrality.toFixed(6)),
+        Number(closenessCentrality.toFixed(6)),
+        pods,
+    ];
 };
 
-export const getInitialHistory = (lookback = 48) => {
-  const history = [];
-  for (let i = 0; i < lookback; i++) {
-     history.push(generateRandomFeatureRow(12, i)); 
-  }
-  return history;
+export const buildScenarioWindow = (scenario, currentPods = 3) => {
+    const window = [];
+    for (let i = 0; i < WINDOW_SIZE; i++) {
+        const row = generateRandomFeatureRow(currentPods, i);
+
+        // Scenario shaping on top of the base generator.
+        if (scenario === "load_test") {
+            row[0] *= 1.8; // request_rate_rps
+            row[1] *= 1.4; // latency_p95_ms
+            row[2] *= 1.4; // latency_p99_ms
+            row[5] *= 1.3; // cpu avg
+            row[7] *= 1.2; // mem avg
+        } else if (scenario === "flash_sale") {
+            row[0] *= (i < 16 ? 1.2 : i < 32 ? 2.4 : 1.4);
+            row[1] *= 1.5;
+            row[2] *= 1.6;
+        } else if (scenario === "gradual_ramp") {
+            const factor = 1 + i / 96;
+            row[0] *= factor;
+            row[5] *= factor;
+            row[7] *= factor;
+        }
+
+        row[0] = Number(row[0].toFixed(2));
+        row[1] = Number(row[1].toFixed(2));
+        row[2] = Number(row[2].toFixed(2));
+        row[5] = Number(row[5].toFixed(2));
+        row[7] = Number(row[7].toFixed(2));
+        window.push(row);
+    }
+    return window;
 };
 
+export const sendWindowToBackend = async ({
+    serviceId = "Order",
+    window,
+    dryRun = false,
+    validate = true,
+    source = "dashboard_synthetic",
+}) => {
+    if (!Array.isArray(window) || window.length !== WINDOW_SIZE) {
+        throw new Error(`window must contain ${WINDOW_SIZE} rows`);
+    }
+    if (window.some((r) => !Array.isArray(r) || r.length !== ROW_WIDTH)) {
+        throw new Error(`each row must contain ${ROW_WIDTH} values`);
+    }
+
+    const res = await fetch(`${API_BASE}/api/v1/metrics/window`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            serviceId,
+            timestamp: new Date().toISOString(),
+            window,
+            dryRun,
+            validate,
+            source,
+        }),
+    });
+
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+};
+
+// Existing dashboard placeholders (used as initial chart states before live data loads).
 export const getPodCountData = () => {
-  const labels = generateTimeLabels(20);
-  return labels.map((time, index) => {
-    // Real simulation zone: pods 2–12, wave-shaped
-    const actual = Math.max(2, Math.round(2 + Math.sin(index * 0.4) * 3 + Math.random()));
-    const predicted = Math.max(2, Math.round(actual + (Math.random() - 0.5) * 1.5));
-    return { time, actual, predicted };
-  });
+    return Array.from({ length: 20 }, (_, i) => {
+        const t = 19 - i;
+        const base = Math.max(2, Math.round(3 + Math.sin(i / 4) * 1.5));
+        return {
+            time: buildTimeLabel(t),
+            actual: base,
+            predicted: base,
+        };
+    });
 };
 
 export const getResourceMetricsData = () => {
-  const labels = generateTimeLabels(15);
-  return labels.map((time) => ({
-    time,
-    cpu: parseFloat((20 + Math.random() * 20).toFixed(1)),      // 20–40 % (real avg: ~28 %)
-    memory: parseFloat((490 + Math.random() * 120).toFixed(0)), // 490–610 MB (real avg: ~555 MB)
-    network: parseFloat((50 + Math.random() * 150).toFixed(0)), // mesh inbound RPS
-  }));
+    return Array.from({ length: 20 }, (_, i) => {
+        const t = 19 - i;
+        return {
+            time: buildTimeLabel(t),
+            cpu: Number((45 + Math.sin(i / 3) * 8 + rand(-2, 2)).toFixed(1)),
+            memory: Number((420 + Math.cos(i / 4) * 65 + rand(-20, 20)).toFixed(1)),
+            network: Number((250 + Math.sin(i / 5) * 90 + rand(-15, 15)).toFixed(1)),
+        };
+    });
 };
 
 export const getPerformanceMetricsData = () => {
-  const labels = generateTimeLabels(15);
-  return labels.map((time) => ({
-    time,
-    latency: parseFloat((60 + Math.random() * 50).toFixed(1)),   // p95 ms (real: 55–130 ms)
-    errorRate: parseFloat((0.03 + Math.random() * 0.01).toFixed(4)), // ~3 % baseline
-    requests: parseFloat((50 + Math.random() * 150).toFixed(0)), // RPS (real: 40–250)
-  }));
+    return Array.from({ length: 20 }, (_, i) => {
+        const t = 19 - i;
+        return {
+            time: buildTimeLabel(t),
+            latency: Number((68 + Math.sin(i / 4) * 11 + rand(-4, 4)).toFixed(1)),
+            requests: Number((360 + Math.cos(i / 3) * 70 + rand(-20, 20)).toFixed(1)),
+            errorRate: Number(clamp(rand(0.05, 1.4), 0, 5).toFixed(3)),
+        };
+    });
 };
 
-export const getProvisioningEfficiencyData = () => [
-  { name: "Under-provisioned", value: 15, color: "#ef4444" }, // Red
-  { name: "Exact Match", value: 70, color: "#22c55e" },       // Green
-  { name: "Over-provisioned", value: 15, color: "#eab308" },  // Yellow
-];
-
-// Single point generators for live updates
-export const getNewPodPoint = (lastTime) => {
-  const time = new Date(Date.now()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const actual = Math.max(2, Math.round(2 + Math.random() * 5));
-  const predicted = Math.max(2, Math.round(actual + (Math.random() - 0.5) * 1.5));
-  return { time, actual, predicted };
-};
-
-export const getNewResourcePoint = () => {
-  const time = new Date(Date.now()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  return {
-      time,
-      cpu: parseFloat((20 + Math.random() * 20).toFixed(1)),
-      memory: parseFloat((490 + Math.random() * 120).toFixed(0)),
-      network: parseFloat((50 + Math.random() * 150).toFixed(0)),
-  };
-};
-
-export const getNewPerformancePoint = () => {
-  const time = new Date(Date.now()).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  return {
-      time,
-      latency: parseFloat((60 + Math.random() * 50).toFixed(1)),
-      errorRate: parseFloat((0.03 + Math.random() * 0.01).toFixed(4)),
-      requests: parseFloat((50 + Math.random() * 150).toFixed(0)),
-  };
+export const getProvisioningEfficiencyData = () => {
+    return [
+        { name: "Under-provisioned", value: 0, color: "#ef4444" },
+        { name: "Exact Match", value: 100, color: "#10b981" },
+        { name: "Over-provisioned", value: 0, color: "#f59e0b" },
+    ];
 };

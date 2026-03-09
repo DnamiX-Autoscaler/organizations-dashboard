@@ -101,24 +101,22 @@ const ContentRenderer = () => {
 
   if (!ComponentToRender) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-            Page Not Found
-          </h2>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {activeMain} / {activeSub}
-          </p>
+      <MLModelProvider>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+              Page Not Found
+            </h2>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
+              {activeMain} / {activeSub}
+            </p>
+          </div>
         </div>
-      </div>
+      </MLModelProvider>
     );
   }
 
-  if (activeMain === "mlmodel") {
-    return <MLModelProvider>{ComponentToRender}</MLModelProvider>;
-  }
-
-  return ComponentToRender;
+  return <MLModelProvider>{ComponentToRender}</MLModelProvider>;
 };
 
 export default ContentRenderer;

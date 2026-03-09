@@ -7,6 +7,7 @@
 import React from "react";
 import { Icon } from "@iconify/react";
 import useMLModel from "../../services/useMLModel";
+import { buildScenarioWindow, sendWindowToBackend } from "./DataGenerator";
 
 const SCENARIOS = [
     {
@@ -69,7 +70,9 @@ const CONF_CONFIG = {
 };
 
 const TrafficSpikePanel = () => {
-    const { injectSpike, spikeActive, isSimulating, isApiHealthy, oodScore, modelConfidence, candidatesReady } = useMLModel();
+    const { injectSpike, spikeActive, isSimulating, isApiHealthy, oodScore, modelConfidence, candidatesReady, currentPods } = useMLModel();
+    const [pipelineBusy, setPipelineBusy] = React.useState(null);
+    const [pipelineResult, setPipelineResult] = React.useState(null);
     // Injection only needs the local queue to be loaded (isSimulating).
     // Predictions happen once the remote API is also healthy (isApiHealthy),
     // but row injection is purely a local queue operation.
@@ -77,6 +80,41 @@ const TrafficSpikePanel = () => {
     const apiPending = isSimulating && !isApiHealthy;
     const activeScenario = SCENARIOS.find((s) => s.type === spikeActive);
     const confCfg = CONF_CONFIG[modelConfidence] ?? CONF_CONFIG.High;
+
+    const handleScenarioClick = async (type) => {
+        if (!canInject || spikeActive || pipelineBusy) return;
+
+        setPipelineBusy(type);
+        setPipelineResult(null);
+
+        try {
+            const pods = Math.max(1, Number(currentPods) || 3);
+            const window = buildScenarioWindow(type, pods);
+            const result = await sendWindowToBackend({
+                serviceId: "Order",
+                window,
+                dryRun: false,
+                validate: true,
+                source: `dashboard_${type}`,
+            });
+
+            setPipelineResult({
+                level: "success",
+                type,
+                message: "Backend pipeline completed",
+                result,
+            });
+            injectSpike(type);
+        } catch (err) {
+            setPipelineResult({
+                level: "error",
+                type,
+                message: err?.message || "Failed to run backend pipeline",
+            });
+        } finally {
+            setPipelineBusy(null);
+        }
+    };
 
     return (
         <div className="bg-white dark:bg-darkBackground border border-gray-100 dark:border-gray-700/50 rounded-xl p-5 shadow-sm space-y-5">
@@ -161,20 +199,22 @@ const TrafficSpikePanel = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                     {SCENARIOS.map((s) => {
                         const isActive = spikeActive === s.type;
+                        const isRunning = pipelineBusy === s.type;
                         return (
                             <button
                                 key={s.type}
-                                onClick={() => canInject && !spikeActive && injectSpike(s.type)}
-                                disabled={!canInject || !!spikeActive}
+                                onClick={() => handleScenarioClick(s.type)}
+                                disabled={!canInject || !!spikeActive || !!pipelineBusy}
                                 className={`relative text-left p-4 rounded-xl border transition-all duration-200 ${
                                     isActive
                                         ? `${s.bg} ${s.border} ring-2 ring-offset-1 ring-current`
-                                        : canInject && !spikeActive
+                                        : canInject && !spikeActive && !pipelineBusy
                                         ? `${s.bg} ${s.border} hover:brightness-95 cursor-pointer`
                                         : "bg-gray-50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed"
                                 }`}
                             >
                                 {isActive && <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${s.activeBg} animate-ping`} />}
+                                {isRunning && <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />}
                                 <Icon icon={s.icon} className={`w-6 h-6 mb-2 ${isActive ? s.color : "text-gray-400"}`} />
                                 <p className={`text-sm font-semibold mb-1 ${isActive ? s.color : "text-gray-700 dark:text-gray-200"}`}>{s.label}</p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug mb-2">{s.description}</p>
@@ -198,6 +238,18 @@ const TrafficSpikePanel = () => {
                     })}
                 </div>
             </div>
+
+            {pipelineResult && (
+                <div
+                    className={`text-xs rounded-lg border px-3 py-2 ${
+                        pipelineResult.level === "success"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-700"
+                            : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700"
+                    }`}
+                >
+                    {pipelineResult.type}: {pipelineResult.message}
+                </div>
+            )}
 
             {/* Footer */}
             <div className="flex gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-700/50 text-xs text-gray-500 dark:text-gray-400">

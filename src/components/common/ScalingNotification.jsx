@@ -1,59 +1,59 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
-import { getSocket } from "../../api/socket";
+import { getScalingEventsStream } from "../../api/config/autoscaling/api";
 
 const ScalingNotification = () => {
     const [alerts, setAlerts] = useState([]);
+    const initialLoadRef = useRef(true);
+    const seenIdsRef = useRef(new Set());
 
     useEffect(() => {
-        const socket = getSocket();
-        if (!socket) return undefined;
+        const addAlert = (data) => {
+            // Track seen IDs to avoid duplicate notifications
+            if (data._id && seenIdsRef.current.has(data._id)) return;
+            if (data._id) seenIdsRef.current.add(data._id);
 
-        const addAlert = (data, isSystem = false) => {
+            // Skip notifications for the initial batch of historical events
+            if (initialLoadRef.current) return;
+
             const id = Date.now() + Math.random();
-            let newAlert;
+            const isRollback = data.status === "ROLLED_BACK";
+            const isScaleUp = data.scale_action === "scale_up" || (data.required_replicas > data.previous_replicas);
 
-            if (isSystem) {
-                newAlert = {
-                    id,
-                    type: data.type || "info",
-                    title: data.title || "System Alert",
-                    message: data.message,
-                    icon: data.type === "error" ? "mdi:alert-decagram" : (data.type === "success" ? "mdi:check-circle" : "mdi:information-outline"),
-                    deployment: "System Notification"
-                };
-            } else {
-                const isRollback = data.status === "ROLLED_BACK";
-                const isScaleUp = data.rule === "Scale Up Triggered" || (data.required_replicas > data.previous_replicas);
+            const newAlert = {
+                id,
+                type: isRollback ? "error" : (isScaleUp ? "success" : "warning"),
+                title: isRollback ? "Scaling Rolled Back" : (isScaleUp ? "Scaling Up" : "Scaling Down"),
+                message: data.message || `Replicas: ${data.previous_replicas} → ${data.required_replicas}`,
+                icon: isRollback ? "mdi:alert-octagon" : (isScaleUp ? "mdi:trending-up" : "mdi:trending-down"),
+                deployment: data.deployment
+            };
 
-                newAlert = {
-                    id,
-                    type: isRollback ? "error" : (isScaleUp ? "success" : "warning"),
-                    title: isRollback ? "Scaling Rolled Back" : (isScaleUp ? "Scaling Up" : "Scaling Down"),
-                    message: data.message || `Replicas: ${data.previous_replicas} -> ${data.required_replicas}`,
-                    icon: isRollback ? "mdi:alert-octagon" : (isScaleUp ? "mdi:trending-up" : "mdi:trending-down"),
-                    deployment: data.deployment
-                };
-            }
-
-            setAlerts(prev => [newAlert, ...prev].slice(0, 5)); // Keep last 5
+            setAlerts(prev => [newAlert, ...prev].slice(0, 5));
 
             setTimeout(() => {
                 setAlerts(prev => prev.filter(a => a.id !== id));
             }, 8000);
         };
 
-        const handleScalingEvent = (data) => addAlert(data, false);
-        const handleSystemAlert = (data) => addAlert(data, true);
+        const stream = getScalingEventsStream(
+            (data) => {
+                addAlert(data);
+            },
+            (error) => {
+                console.error("Scaling notification stream error:", error);
+            },
+            { all: true }
+        );
 
-        socket.on("scaling:scaled", handleScalingEvent);
-        socket.on("scaling:rolled_back", handleScalingEvent);
-        socket.on("system:alert", handleSystemAlert);
+        // After a short delay, mark initial load as done so subsequent events trigger notifications
+        const timer = setTimeout(() => {
+            initialLoadRef.current = false;
+        }, 3000);
 
         return () => {
-            socket.off("scaling:scaled", handleScalingEvent);
-            socket.off("scaling:rolled_back", handleScalingEvent);
-            socket.off("system:alert", handleSystemAlert);
+            stream.close();
+            clearTimeout(timer);
         };
     }, []);
 
