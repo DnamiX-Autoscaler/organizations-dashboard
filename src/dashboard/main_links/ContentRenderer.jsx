@@ -39,7 +39,7 @@ import MLModelPredictionLab from "../sub_links/mlmodel/MLModelPredictionLab";
 import MLModelCostSavings from "../sub_links/mlmodel/MLModelCostSavings";
 import MLModelResourceMonitor from "../sub_links/mlmodel/MLModelResourceMonitor";
 import MLModelAlerts from "../sub_links/mlmodel/MLModelAlerts";
-import { MLModelProvider } from "../../services/MLModelContext";
+
 
 
 
@@ -112,10 +112,6 @@ const ContentRenderer = () => {
         </div>
       </div>
     );
-  }
-
-  if (activeMain === "mlmodel") {
-    return <MLModelProvider>{ComponentToRender}</MLModelProvider>;
   }
 
   return ComponentToRender;
