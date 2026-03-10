@@ -7,28 +7,28 @@ const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + mi
 function generateMetrics(type) {
     if (type === "scale_up" || type === "scale_down") {
         return {
-            successRate: Number(random(0.96, 0.99).toFixed(3)),
-            errorRate: Number(random(0.0001, 0.005).toFixed(4)),
+            successRate: random(0.96, 0.99).toFixed(3),
+            errorRate: random(0.0001, 0.005).toFixed(4),
             p95LatencyBefore: randomInt(150, 300),
             p95LatencyAfter: randomInt(100, 250),
             cpuPercent: randomInt(50, 75),
             memPercent: randomInt(20, 60),
             restartCount: randomInt(0, 1),
-            trafficRecovery: Number(random(0.95, 0.99).toFixed(2))
+            trafficRecovery: random(0.95, 0.99).toFixed(2)
         };
     }
 
     // rollback scenario
     if (type === "rollback") {
         return {
-            successRate: Number(random(0.85, 0.94).toFixed(3)),
-            errorRate: Number(random(0.05, 0.1).toFixed(3)),
+            successRate: random(0.85, 0.94).toFixed(3),
+            errorRate: random(0.05, 0.1).toFixed(3),
             p95LatencyBefore: randomInt(200, 400),
             p95LatencyAfter: randomInt(900, 1500),
             cpuPercent: randomInt(91, 100),
             memPercent: randomInt(85, 100),
             restartCount: randomInt(3, 5),
-            trafficRecovery: Number(random(0.5, 0.89).toFixed(2))
+            trafficRecovery: random(0.5, 0.89).toFixed(2)
         };
     }
 }
