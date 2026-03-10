@@ -86,11 +86,34 @@ export const fetchSimulationData = async () => {
 };
 
 /**
+ * Fetch the current real K8s replica count without scaling.
+ * Sends a no_change action — the executor reads live replicas and returns them.
+ */
+export const fetchRealReplicaCount = async (deploymentName) => {
+  const payload = {
+    services: [{
+      deployment: deploymentName.toLowerCase(),
+      namespace: "ecommerce-test",
+      request_pods: 1,
+      scale_action: "no_change",
+      metrics: {}
+    }]
+  };
+  const response = await axios.post("/api/v1/scale-with-metrics", payload, { timeout: 15000 });
+  return response.data?.results?.[0]?.previous_replicas ?? null;
+};
+
+/**
  * Trigger the auto-scaling executor directly from the UI.
  * Connects the React dashboard directly to the NodeJS executor microservice.
+ *
+ * @param {string}  deploymentName - K8s deployment name
+ * @param {number}  realCurrentPods - actual K8s replica count (from previous executor response)
+ * @param {number}  targetPods - desired pod count (ML prediction)
+ * @param {Object}  metrics - current row metrics for resilience validation
  */
-export const triggerExecutorScaling = async (deploymentName, currentPods, predictedPods, metrics) => {
-  const scaleDiff = predictedPods - currentPods;
+export const triggerExecutorScaling = async (deploymentName, realCurrentPods, targetPods, metrics) => {
+  const scaleDiff = targetPods - realCurrentPods;
   if (scaleDiff === 0) return null;
 
   const scale_action = scaleDiff > 0 ? "scale_up" : "scale_down";

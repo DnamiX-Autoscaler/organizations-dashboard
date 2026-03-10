@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect, useRef } from "react";
 import { MLModelContext } from "./MLModelContextDef";
-import { fetchSimulationData, checkApiHealth, predictPodScaling, fetchScenarioCandidates, triggerExecutorScaling } from "./mlModelService";
+import { fetchSimulationData, checkApiHealth, predictPodScaling, fetchScenarioCandidates, triggerExecutorScaling, fetchRealReplicaCount } from "./mlModelService";
 import {
     loadPredictions, savePrediction, clearPredictions,
     loadModelMetrics, saveModelMetrics,
@@ -240,6 +240,9 @@ export const MLModelProvider = ({ children }) => {
     // Simulated reactive HPA pod count — reacts to current CPU with scale-down stabilization.
     // Kept in a ref so scale-down damping persists across ticks without causing re-renders.
     const hpaPodsRef = useRef(2);
+    // Real K8s replica count — updated from executor responses so the next
+    // scaling request sends the correct delta (real state, not simulation state).
+    const realK8sPodsRef = useRef(null);
 
     // Prediction result cache — skips the API call when the key inputs haven't changed.
     // Signature encodes the dominant model features (pods, RPS, CPU) rounded to suppress
@@ -460,6 +463,16 @@ export const MLModelProvider = ({ children }) => {
             })
             .catch((err) => console.warn("Scenario candidates unavailable:", err.message));
 
+        // Seed real K8s replica count so the first executor call sends the correct delta
+        fetchRealReplicaCount("order")
+            .then((count) => {
+                if (count != null) {
+                    realK8sPodsRef.current = count;
+                    console.info(`[Executor] Real K8s replica count seeded: ${count}`);
+                }
+            })
+            .catch(() => {}); // executor offline — will fall back to simulation pods
+
         return () => { if (healthRetryTimer) clearTimeout(healthRetryTimer); };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -581,13 +594,21 @@ export const MLModelProvider = ({ children }) => {
             // When a scaling action is predicted, send it directly to the local
             // NodeJS executor. This replaces the standalone controller.py daemon.
             if (scaleDiff !== 0) {
+                // Use real K8s pod count for the executor delta; fall back to
+                // simulation pods on the very first call (before any response).
+                const realPods = realK8sPodsRef.current ?? actualPods;
                 // We do not await this, so we don't hold up the simulation tick
-                triggerExecutorScaling("order", actualPods, predictedPodsAtT5, row)
+                triggerExecutorScaling("order", realPods, predictedPodsAtT5, row)
                     .then(res => {
-                        setAlerts(prev => [...prev.slice(-49), {
+                        // Track real K8s state from executor response
+                        const applied = res?.results?.[0]?.required_replicas;
+                        if (applied != null) realK8sPodsRef.current = applied;
+                        const prev = res?.results?.[0]?.previous_replicas;
+                        const act = res?.results?.[0]?.scale_action ?? scaleDiff > 0 ? "scale_up" : "scale_down";
+                        setAlerts(prev2 => [...prev2.slice(-49), {
                             level: "info",
-                            message: `🚀 Triggered Auto-Scale (${scaleDiff > 0 ? "+" : ""}${scaleDiff} pods)`,
-                            detail: `Executor response: ${res?.message || res?.status || "accepted"}`,
+                            message: `🚀 K8s ${act}: ${prev ?? "?"} → ${applied ?? "?"} pods`,
+                            detail: `Executor: ${res?.results?.[0]?.message || res?.results?.[0]?.status || "accepted"}`,
                             time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
                         }]);
                     })
