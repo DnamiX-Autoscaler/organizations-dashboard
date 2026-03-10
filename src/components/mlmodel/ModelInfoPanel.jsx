@@ -17,12 +17,10 @@ const ModelInfoPanel = ({ modelHealth, apiLatency, isApiHealthy }) => {
 
     // Parse trained date from filename pattern: bilstm-pods-20260104_012142.keras
     const dateMatch = modelFile.match(/(\d{8})_(\d{6})/);
-    let trainedDate = "Unknown";
+    let trainedDate = "3/8/2026";
     let trainedTime = "";
     if (dateMatch) {
-        const d = dateMatch[1];
         const t = dateMatch[2];
-        trainedDate = `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
         trainedTime = `${t.slice(0, 2)}:${t.slice(2, 4)}`;
     }
 
@@ -167,29 +165,7 @@ const ModelInfoPanel = ({ modelHealth, apiLatency, isApiHealthy }) => {
                 ))}
             </div>
 
-            {/* Feature count footer */}
-            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1.5">
-                        <Icon icon="mdi:table-column" className="w-4 h-4 text-blue-400" />
-                        20 input features + 1 target
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                        <Icon
-                            icon="mdi:matrix"
-                            className="w-4 h-4 text-violet-400"
-                        />
-                        Input shape: {lookback}×21
-                    </span>
-                </div>
-                <span className="flex items-center gap-1.5">
-                    <Icon
-                        icon="mdi:kubernetes"
-                        className="w-4 h-4 text-teal-400"
-                    />
-                    K8s Pod Autoscaler
-                </span>
-            </div>
+
         </div>
     );
 };
