@@ -83,7 +83,7 @@ const ModelMetrics = mongoose.model("ModelMetrics", modelMetricsSchema);
 // Reads data.csv once, returns the last 30% as JSON.
 // This endpoint starts in <50 ms and has no dependency on the remote ML API,
 // so the frontend simulation queue populates instantly on every page load.
-const CSV_PATH = join(__dirname, "..", "backend", "data", "data.csv");
+const CSV_PATH = join(__dirname, "data.csv");
 let _simCache = null;  // cache after first parse (last 30%)
 let _fullCache = null; // cache for full sorted dataset (all rows)
 
