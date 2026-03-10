@@ -14,10 +14,10 @@ const MLModelPredictionLab = () => {
         <div className="space-y-6">
             <TitleHeader
                 title="Prediction Lab"
-                subtitle="Traffic scenario simulation · Forecast evaluation · Accuracy analysis"
+                subtitle="Traffic scenario analysis · Forecast evaluation · Accuracy benchmarking"
             />
 
-            {/* Traffic scenario simulator — inject spikes to test model response */}
+            {/* Traffic scenario engine — inject load patterns to evaluate model response */}
             <TrafficSpikePanel />
 
             {/* Forecast accuracy — predicted vs actual at the same T+5 moment */}

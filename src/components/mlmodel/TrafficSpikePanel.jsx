@@ -17,9 +17,9 @@ const SCENARIOS = [
         bg: "bg-amber-50 dark:bg-amber-900/20",
         border: "border-amber-200 dark:border-amber-700",
         activeBg: "bg-amber-500",
-        description: "Peak-load pattern · rapid ramp-up, sustained peak, gradual ramp-down",
+        description: "Peak-load profile · rapid ramp-up, sustained peak, gradual ramp-down",
         rows: 20,
-        modelExpect: "The model detects the bell-curve demand pattern and initiates proactive scale-up ahead of the peak. Scaling decisions remain accurate as resource demand follows a predictable distribution.",
+        modelExpect: "The model detects the bell-curve demand profile and initiates proactive scale-up ahead of the peak. Scaling decisions remain accurate as resource demand follows a predictable distribution.",
         expectedAccuracy: "Good",
         oodExpected: "10–35%",
     },
@@ -31,7 +31,7 @@ const SCENARIOS = [
         bg: "bg-blue-50 dark:bg-blue-900/20",
         border: "border-blue-200 dark:border-blue-700",
         activeBg: "bg-blue-500",
-        description: "Sustained growth pattern · steady linear increase in traffic load",
+        description: "Sustained growth profile · steady linear increase in traffic load",
         rows: 25,
         modelExpect: "BiLSTM captures the linear growth trend and anticipates resource demand ahead of time. Proactive scaling decisions prevent latency degradation without over-provisioning.",
         expectedAccuracy: "High",
@@ -45,7 +45,7 @@ const SCENARIOS = [
         bg: "bg-violet-50 dark:bg-violet-900/20",
         border: "border-violet-200 dark:border-violet-700",
         activeBg: "bg-violet-500",
-        description: "Sustained high-load plateau · flat maximum throughput period",
+        description: "High-load plateau · sustained maximum throughput period",
         rows: 20,
         modelExpect: "Stable high-throughput distribution allows the model to maintain consistent predictions. The inference engine holds the correct pod count throughout the plateau without reactionary scaling.",
         expectedAccuracy: "Good",
@@ -105,8 +105,8 @@ const TrafficSpikePanel = () => {
                 <div className="flex gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 text-xs text-amber-700 dark:text-amber-300">
                     <Icon icon="mdi:server-off" className="w-4 h-4 shrink-0 mt-0.5" />
                     <span>
-                        Local server offline — using queue-based scenario selection (reduced accuracy).
-                        Run <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded">node server/index.js</code> for pre-validated full-dataset scenarios.
+                        Local server offline — using queue-based scenario selection (reduced fidelity).
+                        Run <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded">node server/index.js</code> to enable full-dataset scenario validation.
                     </span>
                 </div>
             )}
@@ -150,7 +150,7 @@ const TrafficSpikePanel = () => {
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{activeScenario.modelExpect}</p>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            Monitor the <span className="font-semibold">pod forecast chart</span> and <span className="font-semibold">MAE</span> in the accuracy panel to observe the model’s response.
+                            Monitor the <span className="font-semibold">pod forecast chart</span> and <span className="font-semibold">MAE</span> in the accuracy panel to evaluate the model's inference behaviour.
                         </p>
                     </div>
                 </div>
@@ -177,22 +177,7 @@ const TrafficSpikePanel = () => {
                                 {isActive && <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${s.activeBg} animate-ping`} />}
                                 <Icon icon={s.icon} className={`w-6 h-6 mb-2 ${isActive ? s.color : "text-gray-400"}`} />
                                 <p className={`text-sm font-semibold mb-1 ${isActive ? s.color : "text-gray-700 dark:text-gray-200"}`}>{s.label}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug mb-2">{s.description}</p>
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${ACCURACY_BADGE[s.expectedAccuracy]}`}>
-                                        {s.expectedAccuracy} accuracy
-                                    </span>
-                                    <span className="text-[10px] text-gray-400 font-mono">{s.oodExpected} OOD</span>
-                                    {isSimulating && (
-                                        candidatesReady
-                                            ? <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300">
-                                                ✓ Pre-validated
-                                              </span>
-                                            : <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
-                                                Queue fallback
-                                              </span>
-                                    )}
-                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug">{s.description}</p>
                             </button>
                         );
                     })}
@@ -203,20 +188,20 @@ const TrafficSpikePanel = () => {
             <div className="flex gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-700/50 text-xs text-gray-500 dark:text-gray-400">
                 <Icon icon="mdi:information-outline" className="w-4 h-4 shrink-0 mt-0.5 text-gray-400" />
                 <span>
-                    Scenarios are sourced from production traffic history. The inference engine processes real feature distributions, ensuring scaling decisions reflect observed production behavior.
+                    Scenarios are derived from production traffic history. The inference engine operates on real feature distributions, ensuring scaling decisions reflect observed production behaviour.
                 </span>
             </div>
 
             {!isSimulating && (
                 <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
                     <Icon icon="mdi:timer-sand" className="w-4 h-4" />
-                    Initializing data stream…
+                    Initializing data pipeline…
                 </p>
             )}
             {apiPending && (
                 <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
                     <Icon icon="mdi:cloud-sync-outline" className="w-4 h-4 animate-spin" />
-                    Connecting to inference engine…
+                    Establishing inference engine connection…
                 </p>
             )}
         </div>
