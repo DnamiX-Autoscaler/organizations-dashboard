@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000,
+    port: 3004,
     open: true,
     proxy: {
       "/api/v1": {
@@ -74,6 +74,11 @@ export default defineConfig({
         secure: false,
       },
       "/metrics": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/timeseries": {
         target: "http://localhost:8000",
         changeOrigin: true,
         secure: false,

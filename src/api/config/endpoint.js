@@ -38,6 +38,9 @@ const ENDPOINTS = {
     METRICS_EXPORT: {
         STREAM: "/metrics/live-stream",
     },
+    TIMESERIES: {
+        DATE_RANGE: "/timeseries/date-range",
+    },
 };
 
 export default ENDPOINTS;
