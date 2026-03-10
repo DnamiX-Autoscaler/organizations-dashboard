@@ -84,3 +84,54 @@ export const fetchSimulationData = async () => {
     return null;
   }
 };
+
+/**
+ * Trigger the auto-scaling executor directly from the UI.
+ * Connects the React dashboard directly to the NodeJS executor microservice.
+ */
+export const triggerExecutorScaling = async (deploymentName, currentPods, predictedPods, metrics) => {
+  const scaleDiff = predictedPods - currentPods;
+  if (scaleDiff === 0) return null;
+
+  const scale_action = scaleDiff > 0 ? "scale_up" : "scale_down";
+  const request_pods = Math.abs(scaleDiff);
+
+  const errorPct = parseFloat(metrics.error_rate_percent || 0);
+  const errorRate = Math.min(Math.max(errorPct / 100.0, 0.0), 1.0);
+  const successRate = Number((1.0 - errorRate).toFixed(4));
+  
+  const cpuPercent = Number(parseFloat(metrics.pod_cpu_usage_percent_avg || 0).toFixed(2));
+  let memPercent = (parseFloat(metrics.pod_memory_usage_mb_p95 || 0) / 1024) * 100;
+  memPercent = Math.min(Number(memPercent.toFixed(2)), 100.0);
+  
+  const latency = parseFloat(metrics.latency_p95_ms || 0);
+  const p95LatencyBefore = Number(latency.toFixed(2));
+  const p95LatencyAfter = Number((latency * 0.6).toFixed(2));
+
+  const payload = {
+    services: [
+      {
+        deployment: deploymentName.toLowerCase(),
+        namespace: "ecommerce-test",
+        request_pods,
+        scale_action,
+        metrics: {
+          successRate,
+          errorRate: Number(errorRate.toFixed(4)),
+          p95LatencyBefore,
+          p95LatencyAfter,
+          cpuPercent,
+          memPercent,
+          restartCount: 0,
+          trafficRecovery: 0.98
+        }
+      }
+    ]
+  };
+
+  const EXECUTOR_URL = "/api/v1/scale-with-metrics";
+  const response = await axios.post(EXECUTOR_URL, payload, { timeout: 60000 });
+  console.info(`[Executor] ${scale_action.toUpperCase()} sent for ${deploymentName}. Result:`, response.data);
+  return response.data;
+};
+
