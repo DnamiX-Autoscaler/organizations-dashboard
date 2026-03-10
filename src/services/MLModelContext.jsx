@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect, useRef } from "react";
 import { MLModelContext } from "./MLModelContextDef";
-import { fetchSimulationData, checkApiHealth, predictPodScaling, fetchScenarioCandidates } from "./mlModelService";
+import { fetchSimulationData, checkApiHealth, predictPodScaling, fetchScenarioCandidates, triggerExecutorScaling, fetchRealReplicaCount } from "./mlModelService";
 import {
     loadPredictions, savePrediction, clearPredictions,
     loadModelMetrics, saveModelMetrics,
@@ -106,8 +106,8 @@ const findRealScenarioRows = (type, queue, currentPodCount = 2) => {
     const rowCount = SCENARIO_ROW_COUNT[type] || 20;
     if (pool.length < rowCount) return null;
 
-    const rpsValues  = pool.map((r) => parseFloat(r.request_rate_rps || 0));
-    const podValues  = pool.map((r) => parseInt(r.current_pod_count) || 2);
+    const rpsValues = pool.map((r) => parseFloat(r.request_rate_rps || 0));
+    const podValues = pool.map((r) => parseInt(r.current_pod_count) || 2);
 
     // Normalise RPS so pattern score and pod-proximity score are on similar scales
     const rpsMax = Math.max(...rpsValues) || 1;
@@ -153,10 +153,10 @@ const findRealScenarioRows = (type, queue, currentPodCount = 2) => {
             // Strongest upward linear trend
             const xMean = (n - 1) / 2;
             const yMean = rpsWin.reduce((s, v) => s + v, 0) / n;
-            const num  = rpsWin.reduce((s, v, j) => s + (j - xMean) * (v - yMean), 0);
+            const num = rpsWin.reduce((s, v, j) => s + (j - xMean) * (v - yMean), 0);
             const denX = Math.sqrt(rpsWin.reduce((s, _, j) => s + (j - xMean) ** 2, 0));
             const denY = Math.sqrt(rpsWin.reduce((s, v) => s + (v - yMean) ** 2, 0));
-            const r    = denX * denY === 0 ? 0 : num / (denX * denY);
+            const r = denX * denY === 0 ? 0 : num / (denX * denY);
             const gain = rpsWin[n - 1] - rpsWin[0];
             patternScore = r * 0.7 + gain * 0.3;
 
@@ -240,12 +240,15 @@ export const MLModelProvider = ({ children }) => {
     // Simulated reactive HPA pod count — reacts to current CPU with scale-down stabilization.
     // Kept in a ref so scale-down damping persists across ticks without causing re-renders.
     const hpaPodsRef = useRef(2);
+    // Real K8s replica count — updated from executor responses so the next
+    // scaling request sends the correct delta (real state, not simulation state).
+    const realK8sPodsRef = useRef(null);
 
     // Prediction result cache — skips the API call when the key inputs haven't changed.
     // Signature encodes the dominant model features (pods, RPS, CPU) rounded to suppress
     // tiny float noise.  Always bypassed inside an injected spike (traffic changes every tick).
     const lastWindowSigRef = useRef(null);
-    const lastPredRef      = useRef(null);
+    const lastPredRef = useRef(null);
 
     // True once scenario candidates are loaded from the full CSV via the local server.
     // When false, scenario injection falls back to the limited simulation-queue pool.
@@ -307,7 +310,7 @@ export const MLModelProvider = ({ children }) => {
         // All signal features come from the REAL queue rows at that position so
         // only current_pod_count is overridden — the model still sees valid data.
         const spikeEndPods = parseInt(stitchedRows[stitchedRows.length - 1].current_pod_count) || 2;
-        const resumePods   = parseInt(simulationQueue[insertAt]?.current_pod_count) || 2;
+        const resumePods = parseInt(simulationQueue[insertAt]?.current_pod_count) || 2;
         const podDropDelta = spikeEndPods - resumePods;
         const rampDownRows = [];
         if (podDropDelta > MAX_POD_STEP) {
@@ -330,7 +333,7 @@ export const MLModelProvider = ({ children }) => {
         // Invalidate the prediction cache so the first spike tick always fires a
         // live API call — the traffic pattern has just changed dramatically.
         lastWindowSigRef.current = null;
-        lastPredRef.current      = null;
+        lastPredRef.current = null;
 
         // Store context for lookback-window override in the tick handler.
         // contextRows is null when falling back to queue-based selection.
@@ -440,7 +443,7 @@ export const MLModelProvider = ({ children }) => {
                     clearPredictions();
                     setPredictionLog([]);
                     errorHistory.current = [];
-                    provisioningStats.current = { under: 0, exact: 0, over: 0, total: 0 };                    setIsSimulating(true);
+                    provisioningStats.current = { under: 0, exact: 0, over: 0, total: 0 }; setIsSimulating(true);
                 }
             })
             .catch((err) => console.error("Simulation fetch error:", err));
@@ -460,8 +463,18 @@ export const MLModelProvider = ({ children }) => {
             })
             .catch((err) => console.warn("Scenario candidates unavailable:", err.message));
 
+        // Seed real K8s replica count so the first executor call sends the correct delta
+        fetchRealReplicaCount("order")
+            .then((count) => {
+                if (count != null) {
+                    realK8sPodsRef.current = count;
+                    console.info(`[Executor] Real K8s replica count seeded: ${count}`);
+                }
+            })
+            .catch(() => {}); // executor offline — will fall back to simulation pods
+
         return () => { if (healthRetryTimer) clearTimeout(healthRetryTimer); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Main simulation tick
@@ -553,7 +566,7 @@ export const MLModelProvider = ({ children }) => {
             // Dominant features: pod count, RPS, CPU usage.  During an injected spike every
             // tick is actively changing, so the cache is always bypassed there.
             const windowSig = `${actualPods}-${Math.round(requestRate)}-${Math.round(cpuUsage)}`;
-            const canReuse  = !row._isSpike
+            const canReuse = !row._isSpike
                 && lastWindowSigRef.current === windowSig
                 && lastPredRef.current !== null;
 
@@ -566,7 +579,7 @@ export const MLModelProvider = ({ children }) => {
                     predictedPodsAtT5 = Math.round(resp.predicted_pods) || actualPods;
                     setApiLatency(Math.round(performance.now() - t0));
                     lastWindowSigRef.current = windowSig;
-                    lastPredRef.current      = predictedPodsAtT5;
+                    lastPredRef.current = predictedPodsAtT5;
                 } catch (e) {
                     console.error("Prediction error:", e.message);
                 }
@@ -577,15 +590,48 @@ export const MLModelProvider = ({ children }) => {
             const scaleDiff = predictedPodsAtT5 - actualPods;
             setScalingStatus(scaleDiff > 0 ? "Scaling UP" : scaleDiff < 0 ? "Scaling DOWN" : "Stable");
 
+            // ── EXECUTOR INTEGRATION ─────────────────────────────────────────────
+            // When a scaling action is predicted, send it directly to the local
+            // NodeJS executor. This replaces the standalone controller.py daemon.
+            if (scaleDiff !== 0) {
+                // Use real K8s pod count for the executor delta; fall back to
+                // simulation pods on the very first call (before any response).
+                const realPods = realK8sPodsRef.current ?? actualPods;
+                // We do not await this, so we don't hold up the simulation tick
+                triggerExecutorScaling("order", realPods, predictedPodsAtT5, row)
+                    .then(res => {
+                        // Track real K8s state from executor response
+                        const applied = res?.results?.[0]?.required_replicas;
+                        if (applied != null) realK8sPodsRef.current = applied;
+                        const prev = res?.results?.[0]?.previous_replicas;
+                        const act = res?.results?.[0]?.scale_action ?? scaleDiff > 0 ? "scale_up" : "scale_down";
+                        setAlerts(prev2 => [...prev2.slice(-49), {
+                            level: "info",
+                            message: `🚀 K8s ${act}: ${prev ?? "?"} → ${applied ?? "?"} pods`,
+                            detail: `Executor: ${res?.results?.[0]?.message || res?.results?.[0]?.status || "accepted"}`,
+                            time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+                        }]);
+                    })
+                    .catch(e => {
+                        console.warn("[Executor] Scaling call failed:", e.message);
+                        setAlerts(prev => [...prev.slice(-49), {
+                            level: "critical",
+                            message: `❌ Executor unreachable — scaling not applied`,
+                            detail: `Ensure the executor is running on port 6000. Error: ${e.message}`,
+                            time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+                        }]);
+                    });
+            }
+
             // ── Simulate reactive HPA baseline ────────────────────────────────────
             // Standard Kubernetes HPA: desiredReplicas = ceil(current × cpuUsage / target)
             // CPU target = 65%.  Scale-up: immediate.  Scale-down: stabilised (1 pod/tick max).
             // This gives users a direct visual comparison: proactive AI vs reactive HPA.
             const hpaCpuTarget = 65;
             const rawHpaPods = Math.ceil(actualPods * (cpuUsage / hpaCpuTarget));
-            const clampedHpa  = Math.max(2, Math.min(rawHpaPods, 30));
-            const prevHpa     = hpaPodsRef.current;
-            const hpaPods     = clampedHpa >= prevHpa
+            const clampedHpa = Math.max(2, Math.min(rawHpaPods, 30));
+            const prevHpa = hpaPodsRef.current;
+            const hpaPods = clampedHpa >= prevHpa
                 ? clampedHpa                       // scale-up: immediate
                 : Math.max(clampedHpa, prevHpa - 1); // scale-down: 1 pod/tick stabilisation
             hpaPodsRef.current = hpaPods;
@@ -724,7 +770,7 @@ export const MLModelProvider = ({ children }) => {
         }, SIMULATION_INTERVAL_MS);
 
         return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isSimulating, isApiHealthy, simulationQueue]);
 
     return (

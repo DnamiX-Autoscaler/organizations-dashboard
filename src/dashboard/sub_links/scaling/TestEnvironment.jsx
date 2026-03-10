@@ -38,7 +38,8 @@ function generateRequestBody(type) {
     return {
         services: [
             {
-                deployment: "product",
+                deployment: "order",
+                namespace: "ecommerce-test",
                 request_pods: randomInt(1, 3),
                 scale_action: action,
                 metrics: generateMetrics(type)
