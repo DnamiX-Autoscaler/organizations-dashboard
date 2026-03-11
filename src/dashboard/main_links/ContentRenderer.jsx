@@ -29,6 +29,10 @@ import Alerts from "../sub_links/scaling/Alerts";
 import Reports from "../sub_links/scaling/Reports";
 import CostResourceImpact from "../sub_links/scaling/CostResourceImpact";
 import DeploymentHealth from "../sub_links/scaling/DeploymentHealth";
+// Security sub-components
+import ModelEvaluation from "../sub_links/security/ModelEvaluation";
+import AttackSimulation from "../sub_links/security/AttackSimulation";
+import SecurityMonitoring from "../sub_links/security/SecurityMonitoring";
 import HistoricalTimeSeries from "../sub_links/metrics/HistoricalTimeSeries";
 import ChaosAnalysis from "../sub_links/scaling/ChaosAnalysis";
 import TestEnvironment from "../sub_links/scaling/TestEnvironment";
@@ -95,7 +99,12 @@ const ContentRenderer = () => {
     projects: {
       // Add project sub-components here...
     },
-    // Add more main menu routes here...
+
+    security: {
+  "model-evaluation": <ModelEvaluation />,
+  "attack-simulation": <AttackSimulation />,
+  "security-monitoring": <SecurityMonitoring />,
+},
   };
 
   // Get the component to render

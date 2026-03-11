@@ -54,9 +54,9 @@ const SUB_MENUS = {
     { id: "failover", label: "Failover", hasNotification: false },
   ],
   security: [
-    { id: "users", label: "Users", hasNotification: false },
-    { id: "roles", label: "Roles", hasNotification: false },
-    { id: "audit", label: "Audit Logs", hasNotification: false },
+    { id: "model-evaluation", label: "Model Evaluation", hasNotification: false },
+    { id: "attack-simulation", label: "Attack Simulation", hasNotification: false },
+    { id: "security-monitoring", label: "Security Monitoring", hasNotification: false },
   ],
   deployments: [
     { id: "active", label: "Active Deployments", hasNotification: false },
