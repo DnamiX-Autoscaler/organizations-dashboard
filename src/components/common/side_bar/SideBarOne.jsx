@@ -47,7 +47,7 @@ const SideBarOne = ({ isCollapsed, onToggle, activeItem, onActiveChange, unreadS
       id: "security",
       icon: <Icon icon="mdi:security-lock-outline" className="w-6 h-6" />,
       label: "Security",
-      description: "Access Control & Protection",
+      description: "Anomaly Detection & Threat Analysis",
     },
     {
       id: "deployments",
