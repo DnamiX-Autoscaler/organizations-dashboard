@@ -3,7 +3,8 @@ import Header from "../components/common/Header";
 import SideBar from "../components/common/SideBar";
 import { ThemeProvider } from "../utils/Theme";
 import { RouteProvider } from "../utils/RouteContext";
-import LiveAlertSimulation from "../components/common/LiveAlertSimulation";
+import ScalingNotification from "../components/common/ScalingNotification";
+import { MLModelProvider } from "../services/MLModelContext";
 
 const DashboardLayout = ({ children }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -15,8 +16,9 @@ const DashboardLayout = ({ children }) => {
   return (
     <ThemeProvider>
       <RouteProvider>
+        <MLModelProvider>
         <div className="fixed inset-0 flex transition-colors duration-200 bg-backgroundLight dark:bg-darkBackgroundVery">
-          <LiveAlertSimulation />
+          <ScalingNotification />
           <SideBar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
 
           <div className="flex flex-col flex-1 h-screen overflow-hidden transition-all duration-300">
@@ -26,6 +28,7 @@ const DashboardLayout = ({ children }) => {
             </main>
           </div>
         </div>
+        </MLModelProvider>
       </RouteProvider>
     </ThemeProvider>
   );

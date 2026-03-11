@@ -33,6 +33,20 @@ import DeploymentHealth from "../sub_links/scaling/DeploymentHealth";
 import ModelEvaluation from "../sub_links/security/ModelEvaluation";
 import AttackSimulation from "../sub_links/security/AttackSimulation";
 import SecurityMonitoring from "../sub_links/security/SecurityMonitoring";
+import HistoricalTimeSeries from "../sub_links/metrics/HistoricalTimeSeries";
+import ChaosAnalysis from "../sub_links/scaling/ChaosAnalysis";
+import TestEnvironment from "../sub_links/scaling/TestEnvironment";
+
+//mlmodel sub-components
+import MLModelLogs from "../sub_links/mlmodel/MLModelLogs";
+import MLModelOverview from "../sub_links/mlmodel/MLModelOverview";
+import MLModelPredictionLab from "../sub_links/mlmodel/MLModelPredictionLab";
+import MLModelCostSavings from "../sub_links/mlmodel/MLModelCostSavings";
+import MLModelResourceMonitor from "../sub_links/mlmodel/MLModelResourceMonitor";
+import MLModelAlerts from "../sub_links/mlmodel/MLModelAlerts";
+
+
+
 
 // Add more imports as needed...
 
@@ -57,7 +71,8 @@ const ContentRenderer = () => {
       services: <RunningServices />,
       [`prometheus-ips`]: <RunningPrometheusIPs />,
       [`monitoring-notes`]: <MonitoringNotes />,
-      [`data-exporter`]: <MetricsExport />
+      [`data-exporter`]: <MetricsExport />,
+      [`historical-time-series`]: <HistoricalTimeSeries />
     },
     scaling: {
       event: <ScalingEvent />,
@@ -69,7 +84,17 @@ const ContentRenderer = () => {
       reports: <Reports />,
       cost: <CostResourceImpact />,
       health: <DeploymentHealth />,
+      "chaos-analysis": <ChaosAnalysis />,
+      "test-environment": <TestEnvironment />,
       // Add more scaling sub-components here...
+    },
+    mlmodel: {
+      ["ml-ops-overview"]: <MLModelOverview />,
+      ["prediction-lab"]: <MLModelPredictionLab />,
+      ["cost-savings"]: <MLModelCostSavings />,
+      ["resource-monitor"]: <MLModelResourceMonitor />,
+      ["ml-alerts"]: <MLModelAlerts />,
+      logs: <MLModelLogs />,
     },
     projects: {
       // Add project sub-components here...

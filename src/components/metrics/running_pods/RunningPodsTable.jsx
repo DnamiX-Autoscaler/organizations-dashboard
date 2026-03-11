@@ -5,12 +5,14 @@ import ReadyBadge from "./ReadyBadge.jsx";
 
 const columns = [
   { key: "name", label: "Name", bold: true },
-  { key: "ready", label: "Ready", icon: "fluent:leaf-two-24-regular" }, // Add leaf icon here
+  { key: "ready", label: "Ready", icon: "fluent:leaf-two-24-regular" },
   { key: "status", label: "Status" },
   { key: "restarts", label: "Restarts" },
   { key: "age", label: "Age" },
   { key: "ip", label: "IP" },
   { key: "node", label: "Node" },
+  { key: "nominatedNode", label: "Nominated Node" },
+  { key: "readinessGates", label: "Readiness Gates" },
 ];
 
 const RunningPodsTable = ({ pods, loading, empty }) => {
@@ -19,6 +21,8 @@ const RunningPodsTable = ({ pods, loading, empty }) => {
     ...pod,
     ready: <ReadyBadge ready={pod.ready} />,
     status: <StatusBadge status={pod.status} />,
+    ip: pod.ip ?? <span className="text-gray-400 dark:text-gray-500">—</span>,
+    age: pod.age ? new Date(pod.age).toLocaleString() : "—",
   }));
 
   return (

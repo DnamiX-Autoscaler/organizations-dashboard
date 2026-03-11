@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import TitleHeader from "../../../components/common/TitleHeader";
 import TabSection from "../../../components/common/TabSection";
-import indexesData from "../../../data/indexes";
+import stressIndexService from "../../../api/services/metrics/stress_index";
 import IndexesTable from "../../../components/metrics/indexes/IndexesTable";
 import IndexesGraph from "../../../components/metrics/indexes/IndexesGraph";
+import IndexesCard from "../../../components/metrics/indexes/indexesCard";
 
 // Reusable Insight Card Component
 const InsightCard = ({ icon, iconBg, iconColor, value, title, subtitle }) => (
@@ -59,52 +60,56 @@ const insightCards = [
   },
 ];
 
+const MAX_RETRIES = 5;
+
 const Indexes = () => {
-  const [data, setData] = useState(indexesData);
+  const [data, setData] = useState({ services: [], historical: [], insights: {} });
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("table");
+
+  const abortRef = useRef(null);
+  const retryRef = useRef(0);
 
   const tabs = [
     { key: "table", label: "Table View", icon: "mdi:table" },
+    { key: "card", label: "Card View", icon: "mdi:view-grid" },
     { key: "graph", label: "Graph View", icon: "mdi:chart-line" },
   ];
 
-  // Simulate real-time updates
+  // SSE stream
   useEffect(() => {
-    const interval = setInterval(() => {
-      setData((prevData) => ({
-        ...prevData,
-        services: prevData.services.map((service) => ({
-          ...service,
-          cpu_pressure_index: Math.min(
-            1,
-            Math.max(
-              0,
-              service.cpu_pressure_index + (Math.random() * 0.1 - 0.05)
-            )
-          ),
-          memory_pressure_index: Math.min(
-            1,
-            Math.max(
-              0,
-              service.memory_pressure_index + (Math.random() * 0.1 - 0.05)
-            )
-          ),
-          io_pressure_index: Math.min(
-            1,
-            Math.max(
-              0,
-              service.io_pressure_index + (Math.random() * 0.1 - 0.05)
-            )
-          ),
-          stress_index: Math.min(
-            1,
-            Math.max(0, service.stress_index + (Math.random() * 0.1 - 0.05))
-          ),
-        })),
-      }));
-    }, 3000);
+    const connect = () => {
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-    return () => clearInterval(interval);
+      stressIndexService.connectLiveStream({
+        signal: controller.signal,
+        onOpen: () => {
+          setIsConnected(true);
+          setError(null);
+          retryRef.current = 0;
+        },
+        onMessage: (parsed) => {
+          if (parsed && parsed.services) {
+            setData(parsed);
+          }
+        },
+        onError: (err) => {
+          setIsConnected(false);
+          setError(err?.message ?? "Stream error");
+          if (retryRef.current < MAX_RETRIES) {
+            retryRef.current += 1;
+            setTimeout(connect, 2000 * retryRef.current);
+          }
+        },
+      });
+    };
+
+    connect();
+    return () => {
+      abortRef.current?.abort();
+    };
   }, []);
 
   return (
@@ -116,10 +121,25 @@ const Indexes = () => {
       />
 
       {/* Live Indicator */}
-      <div className="flex items-center gap-2 px-4 py-2 border border-green-200 rounded-lg bg-green-50 dark:bg-green-900/20 dark:border-green-800">
-        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-        <span className="text-sm font-medium text-green-700 dark:text-green-400">
-          Live monitoring - Updates every 3 seconds
+      <div className={`flex items-center gap-2 px-4 py-2 border rounded-lg ${isConnected
+          ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+          : error
+            ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
+            : "bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800"
+        }`}>
+        <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : error ? "bg-red-500" : "bg-yellow-500 animate-pulse"
+          }`} />
+        <span className={`text-sm font-medium ${isConnected
+            ? "text-green-700 dark:text-green-400"
+            : error
+              ? "text-red-700 dark:text-red-400"
+              : "text-yellow-700 dark:text-yellow-400"
+          }`}>
+          {isConnected
+            ? "Live monitoring — SSE stream connected"
+            : error
+              ? `Connection error — ${error}`
+              : "Connecting to live stream…"}
         </span>
       </div>
 
@@ -174,6 +194,16 @@ const Indexes = () => {
             Service-Level Pressure Analysis
           </h3>
           <IndexesTable services={data.services} />
+        </div>
+      )}
+
+      {/* Card View */}
+      {activeTab === "card" && (
+        <div>
+          <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+            Service-Level Pressure Analysis
+          </h3>
+          <IndexesCard services={data.services} />
         </div>
       )}
 

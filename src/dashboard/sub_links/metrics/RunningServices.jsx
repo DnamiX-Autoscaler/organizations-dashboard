@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import TitleHeader from "../../../components/common/TitleHeader";
-import {
-  fetchRunningServices,
-  getServiceStatistics,
-} from "../../../data/runningServices";
+import { getServiceStatistics } from "../../../data/runningServices";
+import runningServicesService from "../../../api/services/metrics/running_services";
 import ServiceStatisticsCards from "../../../components/metrics/running_services/ServiceStatisticsCards.jsx";
 import Search from "../../../components/common/Search.jsx";
 import FilterDropdown from "../../../components/common/FilterDropdown.jsx";
@@ -21,7 +19,7 @@ const RunningServices = () => {
   const loadServices = async () => {
     setLoading(true);
     try {
-      const data = await fetchRunningServices();
+      const data = await runningServicesService.getServices();
       setServices(data);
     } catch (error) {
       console.error("Failed to fetch services:", error);
@@ -37,7 +35,7 @@ const RunningServices = () => {
     if (autoRefresh) {
       const interval = setInterval(() => {
         loadServices();
-      }, 10000);
+      }, 2000);
 
       return () => clearInterval(interval);
     }
@@ -98,11 +96,10 @@ const RunningServices = () => {
           {/* Auto-refresh toggle */}
           <button
             onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all ${
-              autoRefresh
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all ${autoRefresh
                 ? "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20"
                 : "text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800"
-            }`}
+              }`}
           >
             <Icon
               icon={autoRefresh ? "mdi:refresh" : "mdi:refresh-off"}

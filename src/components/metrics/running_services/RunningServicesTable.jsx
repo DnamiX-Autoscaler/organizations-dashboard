@@ -15,6 +15,7 @@ const RunningServicesTable = ({ services, loading, empty }) => {
   const tableData = services.map((service) => ({
     ...service,
     type: <ServiceTypeBadge type={service.type} />,
+    externalIP: service.externalIP ?? <span className="text-gray-400 dark:text-gray-500">&lt;none&gt;</span>,
   }));
 
   return (

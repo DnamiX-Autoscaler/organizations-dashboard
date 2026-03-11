@@ -71,6 +71,12 @@ const IndexesTable = ({ services }) => {
                 Service
               </th>
               <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
+                Namespace
+              </th>
+              <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
+                Timestamp
+              </th>
+              <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
                 CPU Pressure
               </th>
               <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
@@ -90,11 +96,22 @@ const IndexesTable = ({ services }) => {
           <tbody className="bg-white divide-y divide-gray-200 dark:bg-darkBackground dark:divide-gray-700">
             {services.map((service) => (
               <tr
-                key={service.id}
+                key={service.id ?? service.service_name}
                 className="transition-colors hover:bg-gray-50 dark:hover:bg-darkBackgroundVery"
               >
-                <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                  {service.name}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    {service.name ?? service.service_name}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {service.service_name}
+                  </p>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap dark:text-gray-300">
+                  {service.namespace ?? "-"}
+                </td>
+                <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap dark:text-gray-400">
+                  {service.timestamp ? new Date(service.timestamp).toLocaleString() : "-"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <PressureBar
