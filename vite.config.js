@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000,
+    port: 3004,
     open: true,
     proxy: {
       "/api/v1": {
@@ -83,7 +83,18 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "/predictions": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/model-metrics": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+        secure: false,
+      },
     },
+
   },
   optimizeDeps: {
     include: ['react', 'react-dom', '@iconify/react', 'recharts', 'react-is'],

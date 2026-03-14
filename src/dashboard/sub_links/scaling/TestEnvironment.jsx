@@ -38,7 +38,7 @@ function generateRequestBody(type) {
     return {
         services: [
             {
-                deployment: "order",
+                deployment: "product",
                 namespace: "ecommerce-test",
                 request_pods: randomInt(1, 3),
                 scale_action: action,
@@ -107,11 +107,11 @@ const TestEnvironment = () => {
         <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-white">
                         <Icon icon="lucide:zap" className="w-6 h-6 text-yellow-500" />
                         Chaos & Scaling Simulator
                     </h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="mt-1 text-gray-500 dark:text-gray-400">
                         Generate synthetic metrics and trigger mock scaling events instantly
                     </p>
                 </div>
@@ -128,7 +128,7 @@ const TestEnvironment = () => {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <SimulatorCard
                     title="Simulate Scale Up"
                     description="Triggers SUCCESS_VALIDATED upscale"
@@ -152,16 +152,16 @@ const TestEnvironment = () => {
                 />
             </div>
 
-            <div className="bg-white dark:bg-darkBackground p-6 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm mt-8">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+            <div className="p-6 mt-8 bg-white border border-gray-100 shadow-sm dark:bg-darkBackground rounded-xl dark:border-gray-800">
+                <h2 className="flex items-center gap-2 mb-4 text-lg font-semibold text-gray-900 dark:text-white">
                     <Icon icon="lucide:activity" className="w-5 h-5 text-indigo-500" />
                     Simulation Event Stream
                 </h2>
 
                 <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                     {logs.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-12 bg-gray-50 dark:bg-darkBackgroundVery rounded-lg border border-dashed border-gray-200 dark:border-gray-800">
-                            <Icon icon="lucide:server" className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-2" />
+                        <div className="flex flex-col items-center justify-center p-12 border border-gray-200 border-dashed rounded-lg bg-gray-50 dark:bg-darkBackgroundVery dark:border-gray-800">
+                            <Icon icon="lucide:server" className="w-12 h-12 mb-2 text-gray-300 dark:text-gray-600" />
                             <p className="text-gray-400 dark:text-gray-500">No events simulated yet. Fire a request above!</p>
                         </div>
                     ) : (
@@ -187,12 +187,12 @@ const SimulatorCard = ({ title, description, icon, onClick, color }) => {
             onClick={onClick}
             className={`bg-white dark:bg-darkBackground p-6 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm cursor-pointer transition-all duration-300 group ${colorMap[color]}`}
         >
-            <div className="flex justify-between items-start mb-4">
-                <div className="p-3 bg-gray-50 dark:bg-darkBackgroundVery rounded-lg group-hover:scale-110 transition-transform">
+            <div className="flex items-start justify-between mb-4">
+                <div className="p-3 transition-transform rounded-lg bg-gray-50 dark:bg-darkBackgroundVery group-hover:scale-110">
                     {icon}
                 </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{title}</h3>
+            <h3 className="mb-1 text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
         </div>
     );
@@ -204,7 +204,7 @@ const LogEntry = ({ log }) => {
 
     return (
         <div className={`p-4 rounded-xl border ${isError ? 'bg-red-50/50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30' : 'bg-gray-50 dark:bg-darkBackgroundVery border-gray-100 dark:border-gray-800'}`}>
-            <div className="flex items-center justify-between mb-3 border-b border-gray-100 dark:border-gray-800 pb-2">
+            <div className="flex items-center justify-between pb-2 mb-3 border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-2">
                     {isError ? <Icon icon="lucide:shield-alert" className="w-4 h-4 text-red-500" /> : <Icon icon="lucide:activity" className="w-4 h-4 text-indigo-500" />}
                     <span className={`text-sm font-semibold uppercase tracking-wider ${isError ? 'text-red-600 dark:text-red-400' : 'text-indigo-600 dark:text-indigo-400'}`}>
@@ -220,18 +220,18 @@ const LogEntry = ({ log }) => {
                 <span className="text-xs text-gray-400">{log.time}</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                    <span className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Synthetic Payload</span>
-                    <pre className="text-xs bg-white dark:bg-darkBackground p-3 rounded border border-gray-100 dark:border-gray-800 overflow-x-auto text-gray-700 dark:text-gray-300">
+                    <span className="block mb-1 text-xs font-semibold text-gray-500 uppercase">Synthetic Payload</span>
+                    <pre className="p-3 overflow-x-auto text-xs text-gray-700 bg-white border border-gray-100 rounded dark:bg-darkBackground dark:border-gray-800 dark:text-gray-300">
                         {JSON.stringify(log.request, null, 2)}
                     </pre>
                 </div>
                 <div>
-                    <span className="text-xs font-semibold text-gray-500 uppercase mb-1 block">System Response</span>
+                    <span className="block mb-1 text-xs font-semibold text-gray-500 uppercase">System Response</span>
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-darkBackground rounded border border-gray-100 dark:border-gray-800 h-[100px]">
-                            <Icon icon="lucide:loader-2" className="w-6 h-6 text-indigo-500 animate-spin mb-2" />
+                            <Icon icon="lucide:loader-2" className="w-6 h-6 mb-2 text-indigo-500 animate-spin" />
                             <span className="text-xs text-gray-500 animate-pulse">Awaiting API Response...</span>
                         </div>
                     ) : (
