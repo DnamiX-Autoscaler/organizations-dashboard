@@ -121,3 +121,26 @@ body {
     @apply text-gray-400 hover:text-gray-600 hover:bg-gray-50;
   }
 }
+
+/* Dark mode scrollbar styles */
+@layer utilities {
+  .dark ::-webkit-scrollbar {
+    width: 8px;
+    background: #18181b; /* darkBackgroundVery */
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: #33343b; /* slightly lighter for thumb */
+    border-radius: 6px;
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #44444c;
+  }
+  .dark ::-webkit-scrollbar-corner {
+    background: #18181b;
+  }
+
+  .dark {
+    scrollbar-color: #33343b #18181b; /* thumb color, track color */
+    scrollbar-width: thin;
+  }
+}

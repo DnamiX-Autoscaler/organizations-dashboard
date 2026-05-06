@@ -7,9 +7,46 @@ import OverviewActivity from "../sub_links/overview/Activity";
 
 // Metrics sub-components
 import MetricsPerformance from "../sub_links/metrics/Performance";
-import MetricsUsage from "../sub_links/metrics/Usage";
-import MetricsTrends from "../sub_links/metrics/Trends";
-import MetricsForecasting from "../sub_links/metrics/Forecasting";
+import MetricsProcesses from "../sub_links/metrics/Processes";
+import LevelUsages from "../sub_links/metrics/LevelUsages";
+import GraphCentrality from "../sub_links/metrics/GraphCentrality";
+import Indexes from "../sub_links/metrics/Indexes";
+import Explore from "../sub_links/metrics/Explore";
+import RunningPods from "../sub_links/metrics/RunningPods";
+import RunningServices from "../sub_links/metrics/RunningServices";
+import RunningPrometheusIPs from "../sub_links/metrics/RunningPrometheusIPs";
+import Configuratons from "../sub_links/metrics/Configuratons";
+import MonitoringNotes from "../sub_links/metrics/MonitoringNotes";
+import MetricsExport from "../sub_links/metrics/MetricsExport";
+
+// Scaling sub-components
+import ScalingEvent from "../sub_links/scaling/ScalingEvent";
+import RollbackHistory from "../sub_links/scaling/RollbackHistory";
+import ResilienceMetrics from "../sub_links/scaling/ResilienceMetrics";
+import ThresholdPolicyConfig from "../sub_links/scaling/ThresholdPolicyConfig";
+import RealTimeScaling from "../sub_links/scaling/RealTimeScaling";
+import Alerts from "../sub_links/scaling/Alerts";
+import Reports from "../sub_links/scaling/Reports";
+import CostResourceImpact from "../sub_links/scaling/CostResourceImpact";
+import DeploymentHealth from "../sub_links/scaling/DeploymentHealth";
+// Security sub-components
+import ModelEvaluation from "../sub_links/security/ModelEvaluation";
+import AttackSimulation from "../sub_links/security/AttackSimulation";
+import SecurityMonitoring from "../sub_links/security/SecurityMonitoring";
+import HistoricalTimeSeries from "../sub_links/metrics/HistoricalTimeSeries";
+import ChaosAnalysis from "../sub_links/scaling/ChaosAnalysis";
+import TestEnvironment from "../sub_links/scaling/TestEnvironment";
+
+//mlmodel sub-components
+import MLModelLogs from "../sub_links/mlmodel/MLModelLogs";
+import MLModelOverview from "../sub_links/mlmodel/MLModelOverview";
+import MLModelPredictionLab from "../sub_links/mlmodel/MLModelPredictionLab";
+import MLModelCostSavings from "../sub_links/mlmodel/MLModelCostSavings";
+import MLModelResourceMonitor from "../sub_links/mlmodel/MLModelResourceMonitor";
+import MLModelAlerts from "../sub_links/mlmodel/MLModelAlerts";
+
+
+
 
 // Add more imports as needed...
 
@@ -23,15 +60,51 @@ const ContentRenderer = () => {
       activity: <OverviewActivity />,
     },
     metrics: {
+      processes: <MetricsProcesses />,
       performance: <MetricsPerformance />,
-      usage: <MetricsUsage />,
-      trends: <MetricsTrends />,
-      forecasting: <MetricsForecasting />,
+      [`level-usages`]: <LevelUsages />,
+      [`graph-centrality`]: <GraphCentrality />,
+      indexes: <Indexes />,
+      configurations: <Configuratons />,
+      explore: <Explore />,
+      [`running-pods`]: <RunningPods />,
+      services: <RunningServices />,
+      [`prometheus-ips`]: <RunningPrometheusIPs />,
+      [`monitoring-notes`]: <MonitoringNotes />,
+      [`data-exporter`]: <MetricsExport />,
+      [`historical-time-series`]: <HistoricalTimeSeries />
+    },
+    scaling: {
+      event: <ScalingEvent />,
+      metrics: <ResilienceMetrics />,
+      rollback: <RollbackHistory />,
+      "real-time-scaling": <RealTimeScaling />,
+      config: <ThresholdPolicyConfig />,
+      alerts: <Alerts />,
+      reports: <Reports />,
+      cost: <CostResourceImpact />,
+      health: <DeploymentHealth />,
+      "chaos-analysis": <ChaosAnalysis />,
+      "test-environment": <TestEnvironment />,
+      // Add more scaling sub-components here...
+    },
+    mlmodel: {
+      ["ml-ops-overview"]: <MLModelOverview />,
+      ["prediction-lab"]: <MLModelPredictionLab />,
+      ["cost-savings"]: <MLModelCostSavings />,
+      ["resource-monitor"]: <MLModelResourceMonitor />,
+      ["ml-alerts"]: <MLModelAlerts />,
+      logs: <MLModelLogs />,
     },
     projects: {
       // Add project sub-components here...
     },
-    // Add more main menu routes here...
+
+    security: {
+  "model-evaluation": <ModelEvaluation />,
+  "attack-simulation": <AttackSimulation />,
+  "security-monitoring": <SecurityMonitoring />,
+},
   };
 
   // Get the component to render
