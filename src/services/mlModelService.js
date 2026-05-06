@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Read from .env (VITE_ML_API_URL) — change the env var instead of editing source.
-const ML_API_URL  = import.meta.env.VITE_ML_API_URL ?? "https://mlapi-b3h4fpduauancfcg.southeastasia-01.azurewebsites.net";
+const ML_API_URL = import.meta.env.VITE_ML_API_URL ?? "https://k8s-model-api.whiteglacier-fec535bb.southeastasia.azurecontainerapps.io";
 const LOCAL_URL   = "http://localhost:5000";   // local Express server
 
 // Check API health — generous 15 s timeout to survive cold-start

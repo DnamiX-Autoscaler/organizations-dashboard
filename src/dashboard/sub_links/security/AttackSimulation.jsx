@@ -8,7 +8,7 @@ const AttackSimulation = () => {
 
       <div className="w-full h-[calc(100vh-120px)]">
         <iframe
-          src="http://157.173.111.84:3004/"
+          src="http://157.173.111.84:3005/"
           title="Attack Simulation Dashboard"
           className="w-full h-full border-0"
         />
